@@ -1,0 +1,24 @@
+[project]
+name = "policy-game-simulation"
+version = "0.1.0"
+description = "Bayesian inference simulation for policy-based social deduction game"
+requires-python = ">=3.10"
+dependencies = []
+
+[project.optional-dependencies]
+dev = ["pytest>=8.0", "ruff>=0.14.13"]
+
+[project.scripts]
+policy-game-demo = "policy_game.simulation:main"
+policy-game-generate = "policy_game.generator:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/policy_game"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
