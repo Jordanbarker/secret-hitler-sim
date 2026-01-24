@@ -4,6 +4,9 @@ Game simulation and Bayesian inference classes.
 This module contains:
 - DeckState: Tracks probability distribution over deck compositions
 - PlayerBeliefs: Tracks probability estimates for each player being bad
+- PlayerRoles: Tracks which player has which role (Liberal/Fascist/Hitler)
+- GameState: Tracks policies enacted, election tracker, term limits, win conditions
+- VotingBeliefs: Bayesian updates from voting patterns
 - RoundResult: Results from a single round
 - GameSimulation: Orchestrates the game and inference
 """
@@ -11,8 +14,25 @@ This module contains:
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from enum import Enum
 
-from .core import DeckComposition, Draw, Policy, enacted_policy_for_types
+from .core import (
+    DeckComposition,
+    ElectionTracker,
+    Policy,
+    Role,
+    TermLimits,
+    VoteRecord,
+    enacted_policy_for_types,
+)
+
+
+class RoundType(Enum):
+    """Types of rounds in the game."""
+
+    LEGISLATIVE = "LEGISLATIVE"
+    FAILED_ELECTION = "FAILED_ELECTION"
+    CHAOS = "CHAOS"
 
 
 class DeckState:
@@ -194,13 +214,169 @@ class PlayerBeliefs:
 
 
 @dataclass
+class PlayerRoles:
+    """Tracks which player has which role."""
+
+    roles: dict[int, Role] = field(default_factory=dict)
+    hitler_id: int | None = None
+
+    @classmethod
+    def create(
+        cls, num_players: int, bad_player_ids: list[int], hitler_id: int | None = None
+    ) -> "PlayerRoles":
+        """
+        Create player roles for a game.
+
+        Args:
+            num_players: Total number of players
+            bad_player_ids: IDs of bad players (fascists + Hitler)
+            hitler_id: Which bad player is Hitler (defaults to first bad player)
+        """
+        if hitler_id is None and bad_player_ids:
+            hitler_id = bad_player_ids[0]
+
+        roles = {}
+        for player_id in range(num_players):
+            if player_id == hitler_id:
+                roles[player_id] = Role.HITLER
+            elif player_id in bad_player_ids:
+                roles[player_id] = Role.FASCIST
+            else:
+                roles[player_id] = Role.LIBERAL
+
+        return cls(roles=roles, hitler_id=hitler_id)
+
+    def is_bad(self, player_id: int) -> bool:
+        """Check if a player is on the fascist team (fascist or Hitler)."""
+        role = self.roles.get(player_id)
+        return role in (Role.FASCIST, Role.HITLER)
+
+    def is_hitler(self, player_id: int) -> bool:
+        """Check if a player is Hitler."""
+        return player_id == self.hitler_id
+
+    def get_role(self, player_id: int) -> Role:
+        """Get a player's role."""
+        return self.roles.get(player_id, Role.LIBERAL)
+
+
+@dataclass
+class GameState:
+    """Tracks game state including policies, elections, and win conditions."""
+
+    bad_policies_enacted: int = 0
+    good_policies_enacted: int = 0
+    election_tracker: ElectionTracker = field(default_factory=ElectionTracker)
+    term_limits: TermLimits = field(default_factory=TermLimits)
+    game_over: bool = False
+    winner: str | None = None  # "LIBERAL" or "FASCIST"
+    win_condition: str | None = None
+
+    def enact_policy(
+        self,
+        policy: Policy,
+        player_roles: PlayerRoles | None = None,
+        chancellor_id: int | None = None,
+    ) -> bool:
+        """
+        Enact a policy and check win conditions.
+
+        Returns True if game is over.
+        """
+        if policy == Policy.BAD:
+            self.bad_policies_enacted += 1
+        else:
+            self.good_policies_enacted += 1
+
+        # Check policy win conditions
+        if self.good_policies_enacted >= 5:
+            self.game_over = True
+            self.winner = "LIBERAL"
+            self.win_condition = "5 GOOD policies enacted"
+            return True
+        if self.bad_policies_enacted >= 6:
+            self.game_over = True
+            self.winner = "FASCIST"
+            self.win_condition = "6 BAD policies enacted"
+            return True
+
+        return False
+
+    def check_hitler_chancellor_win(self, chancellor_id: int, player_roles: PlayerRoles) -> bool:
+        """Check if Hitler being elected chancellor triggers fascist win."""
+        if self.bad_policies_enacted >= 3 and player_roles.is_hitler(chancellor_id):
+            self.game_over = True
+            self.winner = "FASCIST"
+            self.win_condition = "Hitler elected Chancellor after 3+ BAD policies"
+            return True
+        return False
+
+    def handle_successful_election(self, president_id: int, chancellor_id: int) -> None:
+        """Update state after a successful election."""
+        self.election_tracker.reset()
+        self.term_limits.update(president_id, chancellor_id)
+
+    def handle_failed_election(self) -> bool:
+        """
+        Handle a failed election. Returns True if chaos triggered.
+        """
+        return self.election_tracker.increment()
+
+    def handle_chaos(self) -> None:
+        """Handle chaos - clear term limits."""
+        self.term_limits.clear()
+
+
+class VotingBeliefs:
+    """Tracks and updates beliefs based on voting patterns."""
+
+    def __init__(self, num_players: int):
+        """Initialize voting belief tracking."""
+        self.num_players = num_players
+        # Track voting history for pattern analysis
+        self.vote_history: list[tuple[int, int, VoteRecord, bool]] = []
+        # Track how often players vote together
+        self.vote_agreement: dict[tuple[int, int], int] = {}
+        self.vote_total: dict[tuple[int, int], int] = {}
+
+    def record_vote(
+        self,
+        president_id: int,
+        chancellor_id: int,
+        votes: VoteRecord,
+        vote_passed: bool,
+    ) -> None:
+        """Record a vote for later analysis."""
+        self.vote_history.append((president_id, chancellor_id, votes, vote_passed))
+
+        # Update agreement tracking
+        player_ids = list(votes.votes.keys())
+        for i, p1 in enumerate(player_ids):
+            for p2 in player_ids[i + 1 :]:
+                pair = (min(p1, p2), max(p1, p2))
+                if pair not in self.vote_total:
+                    self.vote_total[pair] = 0
+                    self.vote_agreement[pair] = 0
+                self.vote_total[pair] += 1
+                if votes.votes[p1] == votes.votes[p2]:
+                    self.vote_agreement[pair] += 1
+
+    def get_agreement_rate(self, player1: int, player2: int) -> float | None:
+        """Get the rate at which two players vote the same way."""
+        pair = (min(player1, player2), max(player1, player2))
+        if pair not in self.vote_total or self.vote_total[pair] == 0:
+            return None
+        return self.vote_agreement[pair] / self.vote_total[pair]
+
+
+@dataclass
 class RoundResult:
     """Results from a single round of the game."""
 
     round_num: int
     president_id: int
     chancellor_id: int
-    enacted: Policy
+    enacted: Policy | None  # None for failed elections
     president_prob_bad: float
     chancellor_prob_bad: float
     president_prob_before: float
@@ -208,20 +384,32 @@ class RoundResult:
     top_deck_states: list[tuple[DeckComposition, float]]
     all_player_beliefs: dict[int, float] = field(default_factory=dict)
     deck_expected: tuple[float, float] = (0.0, 0.0)
+    # New voting fields
+    round_type: RoundType = RoundType.LEGISLATIVE
+    votes: VoteRecord | None = None
+    vote_passed: bool = True
+    election_tracker: int = 0
 
     def to_dict(self) -> dict:
         """Convert to JSON-serializable dictionary for visualization."""
-        return {
+        result = {
             "round_num": self.round_num,
             "president_id": self.president_id,
             "chancellor_id": self.chancellor_id,
-            "enacted": self.enacted.value,
+            "round_type": self.round_type.value,
+            "vote_passed": self.vote_passed,
+            "election_tracker": self.election_tracker,
             "player_beliefs": {str(k): round(v, 4) for k, v in self.all_player_beliefs.items()},
             "deck_expected": {
                 "bad": round(self.deck_expected[0], 1),
                 "good": round(self.deck_expected[1], 1),
             },
         }
+        if self.enacted is not None:
+            result["enacted"] = self.enacted.value
+        if self.votes is not None:
+            result["votes"] = self.votes.to_dict()
+        return result
 
 
 class GameSimulation:
