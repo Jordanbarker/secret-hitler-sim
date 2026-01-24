@@ -178,22 +178,22 @@ class TestEdgeCases:
 
     def test_extreme_deck_all_bad(self):
         """Test with deck that's all bad policies."""
-        sim = GameSimulation(bad_policies=10, good_policies=0)
+        sim = GameSimulation(bad_policies=10, good_policies=0, prior_bad_prob=0.5)
         result = sim.play_round(0, 1, Policy.BAD)
 
         # With all bad policies, BAD is certain regardless of player types
         # So probabilities shouldn't change much from prior
-        assert isclose(result.president_prob_bad, 0.5, abs_tol=0.01)
-        assert isclose(result.chancellor_prob_bad, 0.5, abs_tol=0.01)
+        assert isclose(result.president_prob_bad, result.president_prob_before, abs_tol=0.01)
+        assert isclose(result.chancellor_prob_bad, result.chancellor_prob_before, abs_tol=0.01)
 
     def test_extreme_deck_all_good(self):
         """Test with deck that's all good policies."""
-        sim = GameSimulation(bad_policies=0, good_policies=10)
+        sim = GameSimulation(bad_policies=0, good_policies=10, prior_bad_prob=0.5)
         result = sim.play_round(0, 1, Policy.GOOD)
 
         # With all good policies, GOOD is certain regardless of player types
-        assert isclose(result.president_prob_bad, 0.5, abs_tol=0.01)
-        assert isclose(result.chancellor_prob_bad, 0.5, abs_tol=0.01)
+        assert isclose(result.president_prob_bad, result.president_prob_before, abs_tol=0.01)
+        assert isclose(result.chancellor_prob_bad, result.chancellor_prob_before, abs_tol=0.01)
 
     def test_asymmetric_prior(self):
         """Test with asymmetric prior probability."""

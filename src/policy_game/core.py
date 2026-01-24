@@ -55,9 +55,7 @@ class DeckComposition:
     def possible_draws(self, draw_count: int) -> list[Draw]:
         """Generate all possible draws of draw_count cards from this deck."""
         draws = []
-        for bad_drawn in range(
-            max(0, draw_count - self.good), min(draw_count, self.bad) + 1
-        ):
+        for bad_drawn in range(max(0, draw_count - self.good), min(draw_count, self.bad) + 1):
             good_drawn = draw_count - bad_drawn
             if good_drawn <= self.good:
                 draws.append(Draw(bad_drawn, good_drawn))

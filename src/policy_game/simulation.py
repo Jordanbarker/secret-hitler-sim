@@ -64,10 +64,7 @@ class DeckState:
                 # Sum over player type combinations that produce this outcome
                 outcome_prob = 0.0
                 for (pres_bad, chanc_bad), type_prob in player_beliefs.items():
-                    if (
-                        enacted_policy_for_types(draw, pres_bad, chanc_bad, pass_count)
-                        == enacted
-                    ):
+                    if enacted_policy_for_types(draw, pres_bad, chanc_bad, pass_count) == enacted:
                         outcome_prob += type_prob
 
                 if outcome_prob > 0:
@@ -89,9 +86,7 @@ class DeckState:
 
     def top_states(self, n: int = 5) -> list[tuple[DeckComposition, float]]:
         """Return the n most likely deck states."""
-        sorted_states = sorted(
-            self.distribution.items(), key=lambda x: x[1], reverse=True
-        )
+        sorted_states = sorted(self.distribution.items(), key=lambda x: x[1], reverse=True)
         return sorted_states[:n]
 
     def reset(self, bad_policies: int, good_policies: int) -> None:
@@ -166,9 +161,7 @@ class PlayerBeliefs:
                 for pres_bad in [False, True]:
                     for chanc_bad in [False, True]:
                         if (
-                            enacted_policy_for_types(
-                                draw, pres_bad, chanc_bad, pass_count
-                            )
+                            enacted_policy_for_types(draw, pres_bad, chanc_bad, pass_count)
                             == enacted
                         ):
                             likelihoods[(pres_bad, chanc_bad)] += deck_prob * draw_prob
@@ -223,9 +216,7 @@ class RoundResult:
             "president_id": self.president_id,
             "chancellor_id": self.chancellor_id,
             "enacted": self.enacted.value,
-            "player_beliefs": {
-                str(k): round(v, 4) for k, v in self.all_player_beliefs.items()
-            },
+            "player_beliefs": {str(k): round(v, 4) for k, v in self.all_player_beliefs.items()},
             "deck_expected": {
                 "bad": round(self.deck_expected[0], 1),
                 "good": round(self.deck_expected[1], 1),
@@ -265,9 +256,7 @@ class GameSimulation:
         self.round_num = 0
         self.history: list[RoundResult] = []
 
-    def play_round(
-        self, president_id: int, chancellor_id: int, enacted: Policy
-    ) -> RoundResult:
+    def play_round(self, president_id: int, chancellor_id: int, enacted: Policy) -> RoundResult:
         """
         Process a round and update all beliefs.
 
@@ -296,9 +285,7 @@ class GameSimulation:
         )
 
         # Update deck state
-        joint_probs = self.player_beliefs.get_joint_probability(
-            president_id, chancellor_id
-        )
+        joint_probs = self.player_beliefs.get_joint_probability(president_id, chancellor_id)
         self.deck_state.update(enacted, joint_probs, self.draw_count, self.pass_count)
 
         # Get all player beliefs and deck expected for result
