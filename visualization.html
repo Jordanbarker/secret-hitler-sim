@@ -470,7 +470,13 @@
     </style>
 </head>
 <body>
-    <h1>Policy Game Bayesian Visualization</h1>
+    <!-- Loading overlay -->
+    <div id="loading-overlay" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 1000; display: flex; align-items: center; justify-content: center; flex-direction: column;">
+        <div style="color: white; font-size: 1.2rem; margin-bottom: 15px;" id="loading-text">Loading Pyodide...</div>
+        <div style="width: 200px; height: 4px; background: #374151; border-radius: 2px; overflow: hidden;">
+            <div id="loading-bar" style="width: 0%; height: 100%; background: #3b82f6; transition: width 0.3s ease;"></div>
+        </div>
+    </div>
 
     <div class="main-layout">
         <div class="game-container">
@@ -615,6 +621,7 @@
         <button class="btn-prev" id="btn-prev" onclick="prevRound()" disabled>← Previous Round</button>
         <span class="round-counter" id="round-counter">Round 0 of 5</span>
         <button class="btn-next" id="btn-next" onclick="nextRound()">Next Round →</button>
+        <button class="btn-new-game" id="btn-new-game" onclick="generateNewGame()" style="background: linear-gradient(145deg, #8b5cf6 0%, #7c3aed 100%); color: white; box-shadow: 0 4px 15px rgba(139, 92, 246, 0.4);">New Game</button>
     </div>
 
     <div class="info-panel">
@@ -675,54 +682,8 @@
                 initializeGame();
             } catch (error) {
                 console.error('Failed to load game data:', error);
-                // Use embedded fallback data for demo
-                gameData = getEmbeddedGameData();
-                initializeGame();
+                // Will generate a new game once Pyodide is ready
             }
-        }
-
-        // Embedded game data as fallback
-        function getEmbeddedGameData() {
-            return {
-                "config": {
-                    "num_players": 6,
-                    "bad_players": [2, 4],
-                    "initial_deck": {"bad": 11, "good": 6},
-                    "prior_bad_prob": 0.3333333333333333
-                },
-                "initial_state": {
-                    "player_beliefs": {"0": 0.333, "1": 0.333, "2": 0.333, "3": 0.333, "4": 0.333, "5": 0.333},
-                    "deck_expected": {"bad": 11, "good": 6},
-                    "actual_deck": {"bad": 11, "good": 6}
-                },
-                "rounds": [
-                    {"round_num": 1, "president_id": 0, "chancellor_id": 1, "enacted": "GOOD",
-                     "actual_draw": {"bad": 2, "good": 1},
-                     "player_beliefs": {"0": 0.138, "1": 0.138, "2": 0.333, "3": 0.333, "4": 0.333, "5": 0.333},
-                     "deck_expected": {"bad": 9.5, "good": 4.5},
-                     "actual_deck": {"bad": 9, "good": 5}},
-                    {"round_num": 2, "president_id": 1, "chancellor_id": 0, "enacted": "GOOD",
-                     "actual_draw": {"bad": 2, "good": 1},
-                     "player_beliefs": {"0": 0.047, "1": 0.047, "2": 0.333, "3": 0.333, "4": 0.333, "5": 0.333},
-                     "deck_expected": {"bad": 7.8, "good": 3.2},
-                     "actual_deck": {"bad": 7, "good": 4}},
-                    {"round_num": 3, "president_id": 2, "chancellor_id": 3, "enacted": "GOOD",
-                     "actual_draw": {"bad": 1, "good": 2},
-                     "player_beliefs": {"0": 0.047, "1": 0.047, "2": 0.110, "3": 0.110, "4": 0.333, "5": 0.333},
-                     "deck_expected": {"bad": 6.0, "good": 2.0},
-                     "actual_deck": {"bad": 6, "good": 2}},
-                    {"round_num": 4, "president_id": 3, "chancellor_id": 1, "enacted": "GOOD",
-                     "actual_draw": {"bad": 2, "good": 1},
-                     "player_beliefs": {"0": 0.047, "1": 0.010, "2": 0.110, "3": 0.025, "4": 0.333, "5": 0.333},
-                     "deck_expected": {"bad": 4.0, "good": 1.0},
-                     "actual_deck": {"bad": 4, "good": 1}},
-                    {"round_num": 5, "president_id": 4, "chancellor_id": 1, "enacted": "BAD",
-                     "actual_draw": {"bad": 2, "good": 1},
-                     "player_beliefs": {"0": 0.047, "1": 0.015, "2": 0.110, "3": 0.025, "4": 0.497, "5": 0.333},
-                     "deck_expected": {"bad": 1.5, "good": 0.5},
-                     "actual_deck": {"bad": 2, "good": 0}}
-                ]
-            };
         }
 
         function initializeGame() {
@@ -897,6 +858,150 @@
 
         // Initialize on load
         loadGameData();
+
+        // =====================================================================
+        // PYODIDE INTEGRATION FOR IN-BROWSER SIMULATION
+        // =====================================================================
+
+        let pyodide = null;
+        let pyodideReady = false;
+
+        // Python files to load from src/policy_game/
+        const PYTHON_FILES = ['__init__.py', 'core.py', 'simulation.py', 'generator.py'];
+
+        // Runner script that wraps generate_game for JSON output
+        const RUNNER_CODE = `
+import json
+from policy_game import generate_game
+
+def run_simulation():
+    return json.dumps(generate_game())
+`;
+
+        // Fetch Python source files and load them into Pyodide's filesystem
+        async function loadPythonPackage(pyodide, loadingText) {
+            // Create package directory
+            pyodide.FS.mkdir('/policy_game');
+
+            // Fetch and write each file
+            for (const filename of PYTHON_FILES) {
+                loadingText.textContent = `Loading ${filename}...`;
+                const response = await fetch(`src/policy_game/${filename}`);
+                if (!response.ok) {
+                    throw new Error(`Failed to fetch ${filename}: ${response.status}`);
+                }
+                const content = await response.text();
+                pyodide.FS.writeFile(`/policy_game/${filename}`, content);
+            }
+
+            // Add root to Python path so it can find the package
+            await pyodide.runPythonAsync(`
+import sys
+if '/' not in sys.path:
+    sys.path.insert(0, '/')
+`);
+        }
+
+        // Load Pyodide asynchronously
+        async function loadPyodideAndSetup() {
+            const overlay = document.getElementById('loading-overlay');
+            const loadingText = document.getElementById('loading-text');
+            const loadingBar = document.getElementById('loading-bar');
+
+            overlay.style.display = 'flex';
+            loadingBar.style.width = '10%';
+
+            try {
+                loadingText.textContent = 'Loading Pyodide runtime...';
+                loadingBar.style.width = '30%';
+
+                // Load Pyodide from CDN
+                const script = document.createElement('script');
+                script.src = 'https://cdn.jsdelivr.net/pyodide/v0.24.1/full/pyodide.js';
+                document.head.appendChild(script);
+
+                await new Promise((resolve, reject) => {
+                    script.onload = resolve;
+                    script.onerror = reject;
+                });
+
+                loadingText.textContent = 'Initializing Python...';
+                loadingBar.style.width = '50%';
+
+                pyodide = await loadPyodide();
+
+                loadingText.textContent = 'Loading simulation code...';
+                loadingBar.style.width = '60%';
+
+                // Load Python package from src/policy_game/
+                await loadPythonPackage(pyodide, loadingText);
+
+                loadingBar.style.width = '90%';
+                loadingText.textContent = 'Initializing simulation...';
+
+                // Run the runner code that imports from the package
+                await pyodide.runPythonAsync(RUNNER_CODE);
+
+                loadingBar.style.width = '100%';
+                loadingText.textContent = 'Generating game...';
+
+                pyodideReady = true;
+
+                // Auto-generate initial game
+                const result = await pyodide.runPythonAsync('run_simulation()');
+                gameData = JSON.parse(result);
+                currentRound = -1;
+                updateDisplay();
+
+                loadingText.textContent = 'Ready!';
+                setTimeout(() => {
+                    overlay.style.display = 'none';
+                }, 300);
+
+                console.log('Pyodide loaded and game generated!', gameData.config);
+            } catch (error) {
+                console.error('Failed to load Pyodide:', error);
+                loadingText.textContent = 'Failed to load Python runtime.';
+                loadingBar.style.background = '#ef4444';
+            }
+        }
+
+        // Generate a new game using Pyodide
+        async function generateNewGame() {
+            if (!pyodideReady) {
+                alert('Python runtime is still loading. Please wait...');
+                return;
+            }
+
+            const btn = document.getElementById('btn-new-game');
+            const originalText = btn.textContent;
+            btn.textContent = 'Generating...';
+            btn.disabled = true;
+
+            try {
+                // Run Python simulation
+                const result = await pyodide.runPythonAsync('run_simulation()');
+                gameData = JSON.parse(result);
+
+                // Reset to initial state and update display
+                currentRound = -1;
+                updateDisplay();
+
+                console.log('New game generated!', gameData.config);
+            } catch (error) {
+                console.error('Failed to generate game:', error);
+                alert('Failed to generate new game. See console for details.');
+            } finally {
+                btn.textContent = originalText;
+                btn.disabled = false;
+            }
+        }
+
+        // Start loading Pyodide in the background after page loads
+        window.addEventListener('load', () => {
+            // Small delay to let the page render first
+            setTimeout(loadPyodideAndSetup, 100);
+        });
     </script>
 </body>
 </html>
