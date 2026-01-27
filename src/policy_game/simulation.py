@@ -16,6 +16,12 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from enum import Enum
 
+from .constants import (
+    BAD_POLICIES,
+    GOOD_POLICIES,
+    INITIAL_PRIOR_BAD_PROB,
+    NUM_PLAYERS,
+)
 from .core import (
     DeckComposition,
     ElectionTracker,
@@ -43,7 +49,7 @@ class DeckState:
     the deck composition becomes uncertain after each round.
     """
 
-    def __init__(self, bad_policies: int = 11, good_policies: int = 6):
+    def __init__(self, bad_policies: int = BAD_POLICIES, good_policies: int = GOOD_POLICIES):
         """Initialize with known deck composition."""
         initial = DeckComposition(bad_policies, good_policies)
         self.distribution: dict[DeckComposition, float] = {initial: 1.0}
@@ -118,7 +124,9 @@ class DeckState:
 class PlayerBeliefs:
     """Tracks probability estimates for each player being bad."""
 
-    def __init__(self, num_players: int = 2, prior_bad_prob: float = 0.5):
+    def __init__(
+        self, num_players: int = NUM_PLAYERS, prior_bad_prob: float = INITIAL_PRIOR_BAD_PROB
+    ):
         """
         Initialize player beliefs with uniform priors.
 
@@ -419,12 +427,12 @@ class GameSimulation:
 
     def __init__(
         self,
-        bad_policies: int = 11,
-        good_policies: int = 6,
+        bad_policies: int = BAD_POLICIES,
+        good_policies: int = GOOD_POLICIES,
         draw_count: int = 3,
         pass_count: int = 2,
-        num_players: int = 2,
-        prior_bad_prob: float = 0.5,
+        num_players: int = NUM_PLAYERS,
+        prior_bad_prob: float = INITIAL_PRIOR_BAD_PROB,
     ):
         """
         Initialize the game simulation.
@@ -539,10 +547,10 @@ def main():
     print("=" * 60)
     print()
     print("Configuration:")
-    print("  Initial Deck: 11 bad, 6 good policies")
+    print(f"  Initial Deck: {BAD_POLICIES} bad, {GOOD_POLICIES} good policies")
     print("  Draw Count: 3")
     print("  Pass Count: 2")
-    print("  Players: 2 (IDs: 0, 1)")
+    print(f"  Players: {NUM_PLAYERS} (IDs: 0-{NUM_PLAYERS - 1})")
     print("  Prior P(bad): 50%")
     print()
     print("Behavioral Assumptions (Optimal Play):")

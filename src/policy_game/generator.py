@@ -11,6 +11,13 @@ import json
 import random
 from pathlib import Path
 
+from .constants import (
+    BAD_POLICIES,
+    GOOD_POLICIES,
+    INITIAL_PRIOR_BAD_PROB,
+    NUM_FASCISTS,
+    NUM_PLAYERS,
+)
 from .core import (
     Draw,
     Policy,
@@ -172,11 +179,6 @@ def flip_top_policy(deck_bad: int, deck_good: int) -> tuple[Policy, int, int]:
 
 
 def generate_game(
-    num_players: int = 6,
-    bad_player_ids: list[int] | None = None,
-    hitler_id: int | None = None,
-    bad_policies: int = 11,
-    good_policies: int = 6,
     num_rounds: int = 20,
     seed: int | None = None,
 ) -> dict:
@@ -184,72 +186,53 @@ def generate_game(
     Generate a complete game with voting, election tracker, and policy outcomes.
 
     Args:
-        num_players: Number of players at the table
-        bad_player_ids: Which players are secretly bad (fascists + Hitler)
-        hitler_id: Which bad player is Hitler (defaults to first bad player)
-        bad_policies: Initial bad policies in deck
-        good_policies: Initial good policies in deck
         num_rounds: Maximum rounds to play
         seed: Random seed for reproducibility
 
     Returns:
         Dictionary with complete game data for visualization
     """
-    if seed is not None:
-        random.seed(seed)
+    if seed is None:
+        seed = random.randint(0, 2**32 - 1)
+    random.seed(seed)
 
-    if bad_player_ids is None:
-        # Randomly select 2 bad players from all players
-        bad_player_ids = random.sample(range(num_players), 2)
-
-    # Create player roles
-    player_roles = PlayerRoles.create(num_players, bad_player_ids, hitler_id)
-
-    # Prior probability based on known bad count
-    prior_bad_prob = len(bad_player_ids) / num_players
-
-    # Initialize simulation for Bayesian tracking
-    sim = GameSimulation(
-        bad_policies=bad_policies,
-        good_policies=good_policies,
-        num_players=num_players,
-        prior_bad_prob=prior_bad_prob,
-    )
-
-    # Initialize game state
+    bad_player_ids = random.sample(range(NUM_PLAYERS), NUM_FASCISTS)
+    player_roles = PlayerRoles.create(NUM_PLAYERS, bad_player_ids, None)
+    sim = GameSimulation()
     game_state = GameState()
 
     # Track actual deck state
-    actual_deck_bad = bad_policies
-    actual_deck_good = good_policies
+    actual_deck_bad = BAD_POLICIES
+    actual_deck_good = GOOD_POLICIES
 
     game_data = {
         "config": {
-            "num_players": num_players,
+            "seed": seed,
+            "num_players": NUM_PLAYERS,
             "bad_players": bad_player_ids,
             "hitler_id": player_roles.hitler_id,
-            "initial_deck": {"bad": bad_policies, "good": good_policies},
-            "prior_bad_prob": prior_bad_prob,
+            "initial_deck": {"bad": BAD_POLICIES, "good": GOOD_POLICIES},
+            "prior_bad_prob": INITIAL_PRIOR_BAD_PROB,
         },
         "initial_state": {
-            "player_beliefs": {str(i): prior_bad_prob for i in range(num_players)},
-            "deck_expected": {"bad": bad_policies, "good": good_policies},
+            "player_beliefs": {str(i): INITIAL_PRIOR_BAD_PROB for i in range(NUM_PLAYERS)},
+            "deck_expected": {"bad": BAD_POLICIES, "good": GOOD_POLICIES},
         },
         "rounds": [],
     }
 
-    president_id = random.randint(0, num_players - 1)
+    president_id = random.randint(0, NUM_PLAYERS - 1)
     round_num = 0
 
     while round_num < num_rounds and not game_state.game_over:
         round_num += 1
 
         # 1. Rotate president
-        president_id = (president_id + 1) % num_players
+        president_id = (president_id + 1) % NUM_PLAYERS
 
         # 2. Get eligible chancellor candidates (apply term limits)
         eligible_chancellors = get_eligible_chancellors(
-            num_players, president_id, game_state.term_limits
+            NUM_PLAYERS, president_id, game_state.term_limits
         )
 
         if not eligible_chancellors:
@@ -270,7 +253,7 @@ def generate_game(
 
         # 4. All players vote
         votes = conduct_vote(
-            num_players=num_players,
+            num_players=NUM_PLAYERS,
             president_id=president_id,
             chancellor_id=chancellor_id,
             player_roles=player_roles,
@@ -291,9 +274,9 @@ def generate_game(
                 # Reshuffle if needed
                 reshuffled = False
                 if actual_deck_bad + actual_deck_good < 1:
-                    actual_deck_bad = bad_policies
-                    actual_deck_good = good_policies
-                    sim.reset_deck(bad_policies, good_policies)
+                    actual_deck_bad = BAD_POLICIES
+                    actual_deck_good = GOOD_POLICIES
+                    sim.reset_deck(BAD_POLICIES, GOOD_POLICIES)
                     reshuffled = True
 
                 enacted, actual_deck_bad, actual_deck_good = flip_top_policy(
@@ -378,9 +361,9 @@ def generate_game(
             # Reshuffle with fresh deck if fewer than 3 cards remain
             reshuffled = False
             if actual_deck_bad + actual_deck_good < 3:
-                actual_deck_bad = bad_policies
-                actual_deck_good = good_policies
-                sim.reset_deck(bad_policies, good_policies)
+                actual_deck_bad = BAD_POLICIES
+                actual_deck_good = GOOD_POLICIES
+                sim.reset_deck(BAD_POLICIES, GOOD_POLICIES)
                 reshuffled = True
 
             # Simulate actual draw

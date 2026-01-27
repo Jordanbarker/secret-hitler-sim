@@ -2,18 +2,18 @@
 Tests for core data models and strategy functions.
 """
 
-import pytest
 from math import isclose
 
+import pytest
+
 from policy_game import (
-    Policy,
-    Draw,
     DeckComposition,
-    president_passes,
+    Draw,
+    Policy,
     chancellor_enacts,
     enacted_policy_for_types,
+    president_passes,
 )
-
 
 # =============================================================================
 # TESTS: Draw and DeckComposition

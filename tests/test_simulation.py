@@ -2,18 +2,17 @@
 Tests for simulation and Bayesian inference classes.
 """
 
-import pytest
 from math import isclose
 
+import pytest
+
 from policy_game import (
-    Policy,
-    Draw,
     DeckComposition,
     DeckState,
-    PlayerBeliefs,
     GameSimulation,
+    PlayerBeliefs,
+    Policy,
 )
-
 
 # =============================================================================
 # TESTS: DeckState
