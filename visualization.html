@@ -356,6 +356,54 @@
             text-shadow: 0 0 8px rgba(239, 68, 68, 0.5);
         }
 
+        /* Player cards container - positioned to the left of each player */
+        .player-cards {
+            position: absolute;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .player-cards.visible {
+            opacity: 1;
+        }
+
+        .player-cards .card-section {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 2px;
+        }
+
+        .player-cards .card-label {
+            font-size: 0.5rem;
+            color: var(--color-text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .player-cards .card-hand {
+            display: flex;
+            gap: 3px;
+        }
+
+        .player-cards .card {
+            width: 24px;
+            height: 36px;
+            border-radius: 3px;
+            font-size: 0.45rem;
+        }
+
+        /* Position player cards to the left of each player */
+        .player-0 .player-cards { right: calc(100% + 8px); top: 50%; transform: translateY(-50%); }
+        .player-1 .player-cards { right: calc(100% + 8px); top: 50%; transform: translateY(-50%); }
+        .player-2 .player-cards { right: calc(100% + 8px); top: 50%; transform: translateY(-50%); }
+        .player-3 .player-cards { left: calc(100% + 8px); top: 50%; transform: translateY(-50%); }
+        .player-4 .player-cards { left: calc(100% + 8px); top: 50%; transform: translateY(-50%); }
+        .player-5 .player-cards { left: calc(100% + 8px); top: 50%; transform: translateY(-50%); }
+
         /* Control panel */
         .controls {
             margin-top: 20px;
@@ -562,28 +610,7 @@
             color: white;
         }
 
-        /* Card Panel */
-        .card-panel {
-            width: 180px;
-            background: var(--color-panel);
-            border-radius: 12px;
-            padding: 20px;
-            display: flex;
-            flex-direction: column;
-            gap: 20px;
-            align-self: center;
-        }
-
-        .card-panel-section {
-            padding-bottom: 15px;
-            border-bottom: 1px solid var(--color-surface);
-        }
-
-        .card-panel-section:last-child {
-            border-bottom: none;
-            padding-bottom: 0;
-        }
-
+        /* Cards */
         .card-hand {
             display: flex;
             gap: 8px;
@@ -672,6 +699,7 @@
                 <div class="player-name">Player 0</div>
                 <div class="player-identity" id="identity-0">Good</div>
                 <div class="player-prob" id="prob-0">P(bad): 33.3%</div>
+                <div class="player-cards" id="cards-0"></div>
             </div>
 
             <div class="player player-1" id="player-1">
@@ -688,6 +716,7 @@
                 <div class="player-name">Player 1</div>
                 <div class="player-identity" id="identity-1">Good</div>
                 <div class="player-prob" id="prob-1">P(bad): 33.3%</div>
+                <div class="player-cards" id="cards-1"></div>
             </div>
 
             <div class="player player-2" id="player-2">
@@ -704,6 +733,7 @@
                 <div class="player-name">Player 2</div>
                 <div class="player-identity" id="identity-2">Good</div>
                 <div class="player-prob" id="prob-2">P(bad): 33.3%</div>
+                <div class="player-cards" id="cards-2"></div>
             </div>
 
             <div class="player player-3" id="player-3">
@@ -720,6 +750,7 @@
                 <div class="player-name">Player 3</div>
                 <div class="player-identity" id="identity-3">Good</div>
                 <div class="player-prob" id="prob-3">P(bad): 33.3%</div>
+                <div class="player-cards" id="cards-3"></div>
             </div>
 
             <div class="player player-4" id="player-4">
@@ -736,6 +767,7 @@
                 <div class="player-name">Player 4</div>
                 <div class="player-identity" id="identity-4">Good</div>
                 <div class="player-prob" id="prob-4">P(bad): 33.3%</div>
+                <div class="player-cards" id="cards-4"></div>
             </div>
 
             <div class="player player-5" id="player-5">
@@ -752,19 +784,12 @@
                 <div class="player-name">Player 5</div>
                 <div class="player-identity" id="identity-5">Good</div>
                 <div class="player-prob" id="prob-5">P(bad): 33.3%</div>
+                <div class="player-cards" id="cards-5"></div>
             </div>
         </div>
 
         <!-- Side Panel with Deck Info -->
         <div class="side-panel">
-            <div class="side-panel-section">
-                <div class="section-header">This Round's Draw</div>
-                <div class="section-subheader">(Hidden Info)</div>
-                <div id="actual-draw-content">
-                    <div class="no-draw">No draw yet</div>
-                </div>
-            </div>
-
             <div class="side-panel-section">
                 <div class="section-header">Actual Deck</div>
                 <div class="section-subheader">(Hidden Info)</div>
@@ -792,21 +817,6 @@
             </div>
         </div>
 
-        <!-- Card Panel -->
-        <div class="card-panel" id="card-panel">
-            <div class="card-panel-section">
-                <div class="section-header">President Drew</div>
-                <div class="card-hand" id="president-hand">
-                    <div class="card-message">No draw yet</div>
-                </div>
-            </div>
-            <div class="card-panel-section">
-                <div class="section-header">Chancellor Received</div>
-                <div class="card-hand" id="chancellor-hand">
-                    <div class="card-message">No selection yet</div>
-                </div>
-            </div>
-        </div>
     </div>
 
     <!-- Policy Boards -->
@@ -981,23 +991,6 @@
                 const isBad = badPlayers.includes(i);
                 const isHitler = i === hitlerId;
                 updatePlayerNode(i, prob, i === presidentId, i === chancellorId, isBad, isHitler);
-            }
-
-            // Update side panel - Actual Draw
-            const actualDrawContent = document.getElementById('actual-draw-content');
-            if (actualDraw) {
-                actualDrawContent.innerHTML = `
-                    <div class="deck-row">
-                        <span class="deck-label"><span class="dot-bad"></span> Bad</span>
-                        <span class="deck-value bad">${actualDraw.bad}</span>
-                    </div>
-                    <div class="deck-row">
-                        <span class="deck-label"><span class="dot-good"></span> Good</span>
-                        <span class="deck-value good">${actualDraw.good}</span>
-                    </div>
-                `;
-            } else {
-                actualDrawContent.innerHTML = '<div class="no-draw">No draw yet</div>';
             }
 
             // Update side panel - Actual Deck
@@ -1220,27 +1213,41 @@
         }
 
         /**
-         * Render the card panel showing what president drew and chancellor received.
+         * Clear all player card containers.
+         */
+        function clearAllPlayerCards() {
+            for (let i = 0; i < 6; i++) {
+                const container = document.getElementById(`cards-${i}`);
+                container.innerHTML = '';
+                container.classList.remove('visible');
+            }
+        }
+
+        /**
+         * Render the card displays next to president and chancellor players.
          */
         function renderCardPanel() {
-            const presidentHand = document.getElementById('president-hand');
-            const chancellorHand = document.getElementById('chancellor-hand');
+            // Clear all player cards first
+            clearAllPlayerCards();
 
             if (currentRound === -1) {
-                // Initial state
-                presidentHand.innerHTML = '<div class="card-message">No draw yet</div>';
-                chancellorHand.innerHTML = '<div class="card-message">No selection yet</div>';
+                // Initial state - no cards to show
                 return;
             }
 
             const round = gameData.rounds[currentRound];
             const roundType = round.round_type || 'LEGISLATIVE';
             const actualDraw = round.actual_draw;
+            const presidentId = round.president_id;
+            const chancellorId = round.chancellor_id;
+
+            // Get the card containers
+            const presidentContainer = document.getElementById(`cards-${presidentId}`);
+            const chancellorContainer = document.getElementById(`cards-${chancellorId}`);
 
             // Handle failed elections
             if (roundType === 'FAILED_ELECTION') {
-                presidentHand.innerHTML = '<div class="card-message">No draw this round</div>';
-                chancellorHand.innerHTML = '<div class="card-message">Election failed</div>';
+                // No cards to show for failed elections
                 return;
             }
 
@@ -1248,23 +1255,25 @@
             if (roundType === 'CHAOS') {
                 const enacted = round.enacted;
                 const cardClass = enacted === 'BAD' ? 'bad' : 'good';
-                presidentHand.innerHTML = `<div class="card ${cardClass} enacted"></div>`;
-                chancellorHand.innerHTML = '<div class="card-message">Flipped from deck</div>';
+                presidentContainer.innerHTML = `
+                    <div class="card-section">
+                        <div class="card-label">Chaos</div>
+                        <div class="card-hand">
+                            <div class="card ${cardClass} enacted"></div>
+                        </div>
+                    </div>
+                `;
+                presidentContainer.classList.add('visible');
                 return;
             }
 
             // Normal legislative round
             if (!actualDraw) {
-                presidentHand.innerHTML = '<div class="card-message">No draw data</div>';
-                chancellorHand.innerHTML = '<div class="card-message">No selection data</div>';
                 return;
             }
 
             const badPlayers = gameData.config.bad_players || [];
-            const presidentId = round.president_id;
-            const chancellorId = round.chancellor_id;
             const presidentIsBad = badPlayers.includes(presidentId);
-            const chancellorIsBad = badPlayers.includes(chancellorId);
             const enacted = round.enacted;
 
             // Calculate what president passed
@@ -1274,7 +1283,6 @@
             const presCards = drawToCards(actualDraw);
 
             // Figure out which card the president discarded
-            // Compare actualDraw to passed to find discarded type
             let discardedType;
             if (actualDraw.bad > passed.bad) {
                 discardedType = 'BAD';
@@ -1285,8 +1293,14 @@
             // Find index of discarded card (first occurrence of that type)
             const presDiscardedIndex = presCards.indexOf(discardedType);
 
-            // Render president's hand
-            presidentHand.innerHTML = renderCardHand(presCards, presDiscardedIndex, null);
+            // Render president's cards
+            presidentContainer.innerHTML = `
+                <div class="card-section">
+                    <div class="card-label">Drew</div>
+                    <div class="card-hand">${renderCardHand(presCards, presDiscardedIndex, null)}</div>
+                </div>
+            `;
+            presidentContainer.classList.add('visible');
 
             // Build chancellor's hand (2 cards)
             const chancCards = drawToCards(passed);
@@ -1295,7 +1309,7 @@
             const discardedPolicy = enacted === 'BAD' ? 'GOOD' : 'BAD';
             const chancDiscardedIndex = chancCards.indexOf(discardedPolicy);
 
-            // Find enacted card index (first occurrence that's not discarded)
+            // Find enacted card index
             let chancEnactedIndex = -1;
             for (let i = 0; i < chancCards.length; i++) {
                 if (i !== chancDiscardedIndex && chancCards[i] === enacted) {
@@ -1303,7 +1317,6 @@
                     break;
                 }
             }
-            // If we didn't find it (both cards same type), enacted is the non-discarded one
             if (chancEnactedIndex === -1) {
                 for (let i = 0; i < chancCards.length; i++) {
                     if (i !== chancDiscardedIndex) {
@@ -1313,8 +1326,14 @@
                 }
             }
 
-            // Render chancellor's hand
-            chancellorHand.innerHTML = renderCardHand(chancCards, chancDiscardedIndex, chancEnactedIndex);
+            // Render chancellor's cards
+            chancellorContainer.innerHTML = `
+                <div class="card-section">
+                    <div class="card-label">Received</div>
+                    <div class="card-hand">${renderCardHand(chancCards, chancDiscardedIndex, chancEnactedIndex)}</div>
+                </div>
+            `;
+            chancellorContainer.classList.add('visible');
         }
 
         // Initialize on load
@@ -1328,7 +1347,7 @@
         let pyodideReady = false;
 
         // Python files to load from src/policy_game/
-        const PYTHON_FILES = ['__init__.py', 'core.py', 'simulation.py', 'generator.py'];
+        const PYTHON_FILES = ['__init__.py', 'constants.py', 'core.py', 'simulation.py', 'generator.py'];
 
         // Runner script that wraps generate_game for JSON output
         const RUNNER_CODE = `
