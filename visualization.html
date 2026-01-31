@@ -81,134 +81,6 @@
             height: 600px;
         }
 
-        /* Side panel */
-        .side-panel {
-            width: 220px;
-            background: var(--color-panel);
-            border-radius: 12px;
-            padding: 20px;
-            display: flex;
-            flex-direction: column;
-            gap: 20px;
-        }
-
-        .side-panel-section {
-            padding-bottom: 15px;
-            border-bottom: 1px solid var(--color-surface);
-        }
-
-        .side-panel-section:last-child {
-            border-bottom: none;
-            padding-bottom: 0;
-        }
-
-        .section-header {
-            font-size: 0.7rem;
-            color: var(--color-text-muted);
-            text-transform: uppercase;
-            letter-spacing: 1.5px;
-            margin-bottom: 10px;
-        }
-
-        .section-subheader {
-            font-size: 0.65rem;
-            color: var(--color-text-disabled);
-            font-style: italic;
-            margin-top: -6px;
-            margin-bottom: 10px;
-        }
-
-        .deck-row {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 8px;
-        }
-
-        .deck-row:last-child {
-            margin-bottom: 0;
-        }
-
-        .deck-label {
-            font-size: 0.85rem;
-            color: var(--color-text-tertiary);
-            display: flex;
-            align-items: center;
-            gap: 6px;
-        }
-
-        .deck-value {
-            font-size: 1rem;
-            font-weight: 600;
-        }
-
-        .deck-value.bad {
-            color: var(--color-bad);
-        }
-
-        .deck-value.good {
-            color: var(--color-good);
-        }
-
-        .deck-table {
-            width: 100%;
-            border-collapse: collapse;
-        }
-
-        .deck-table th {
-            font-size: 0.65rem;
-            color: var(--color-text-disabled);
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            font-weight: normal;
-            padding: 0 8px 8px 0;
-            text-align: right;
-        }
-
-        .deck-table th:first-child {
-            text-align: left;
-        }
-
-        .deck-table td {
-            padding: 4px 8px 4px 0;
-            font-size: 0.85rem;
-            color: var(--color-text-tertiary);
-        }
-
-        .deck-table td:first-child {
-            display: flex;
-            align-items: center;
-            gap: 6px;
-        }
-
-        .deck-table td:not(:first-child) {
-            text-align: right;
-        }
-
-        .deck-table .deck-value {
-            font-size: 1rem;
-        }
-
-        .dot-bad {
-            width: 8px;
-            height: 8px;
-            border-radius: 50%;
-            background: var(--color-bad);
-        }
-
-        .dot-good {
-            width: 8px;
-            height: 8px;
-            border-radius: 50%;
-            background: var(--color-good);
-        }
-
-        .no-draw {
-            color: var(--color-text-disabled);
-            font-style: italic;
-            font-size: 0.85rem;
-        }
-
         /* Central table */
         .table {
             position: absolute;
@@ -227,10 +99,49 @@
             box-shadow: 0 10px 40px rgba(0,0,0,0.4);
         }
 
-        .round-info {
-            font-size: 1.1rem;
+        /* Compact deck info inside table */
+        .deck-info-compact {
+            font-size: 0.8rem;
+            text-align: center;
+            margin-bottom: 8px;
+        }
+
+        .deck-row-compact {
+            display: flex;
+            gap: 6px;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .deck-row-compact .dot-bad,
+        .deck-row-compact .dot-good {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+        }
+
+        .deck-row-compact .dot-bad {
+            background: var(--color-bad);
+        }
+
+        .deck-row-compact .dot-good {
+            background: var(--color-good);
+        }
+
+        .deck-row-compact .deck-text {
+            color: var(--color-text-tertiary);
+        }
+
+        .deck-row-compact .deck-value {
             font-weight: 600;
-            color: var(--color-text-secondary);
+        }
+
+        .deck-row-compact .deck-value.bad {
+            color: var(--color-bad);
+        }
+
+        .deck-row-compact .deck-value.good {
+            color: var(--color-good);
         }
 
         .policy-card {
@@ -767,7 +678,20 @@
         <div class="game-container">
             <!-- Central table -->
             <div class="table">
-                <div class="round-info" id="round-info">Before Round 1</div>
+                <div class="deck-info-compact">
+                    <div class="deck-row-compact">
+                        <span class="dot-bad"></span>
+                        <span class="deck-text">Bad:</span>
+                        <span class="deck-value bad" id="table-deck-bad">11</span>
+                        <span class="deck-text">(<span id="table-deck-bad-est">~11</span>)</span>
+                    </div>
+                    <div class="deck-row-compact">
+                        <span class="dot-good"></span>
+                        <span class="deck-text">Good:</span>
+                        <span class="deck-value good" id="table-deck-good">6</span>
+                        <span class="deck-text">(<span id="table-deck-good-est">~6</span>)</span>
+                    </div>
+                </div>
                 <div class="policy-card hidden" id="policy-card">—</div>
             </div>
 
@@ -880,35 +804,6 @@
                 <div class="player-vote" id="vote-5"></div>
             </div>
         </div>
-
-        <!-- Side Panel with Deck Info -->
-        <div class="side-panel">
-            <div class="side-panel-section">
-                <div class="section-header">Deck Composition</div>
-                <table class="deck-table">
-                    <thead>
-                        <tr>
-                            <th></th>
-                            <th>Actual</th>
-                            <th>Estimate</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr>
-                            <td><span class="dot-bad"></span> Bad</td>
-                            <td class="deck-value bad" id="actual-deck-bad">—</td>
-                            <td class="deck-value bad" id="expected-deck-bad">~11.0</td>
-                        </tr>
-                        <tr>
-                            <td><span class="dot-good"></span> Good</td>
-                            <td class="deck-value good" id="actual-deck-good">—</td>
-                            <td class="deck-value good" id="expected-deck-good">~6.0</td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
-        </div>
-
     </div>
 
     <!-- Policy Boards -->
@@ -1053,14 +948,6 @@
                 enacted = round.enacted;
             }
 
-            // Update round info
-            const roundInfo = document.getElementById('round-info');
-            if (currentRound === -1) {
-                roundInfo.textContent = 'Before Round 1';
-            } else {
-                roundInfo.textContent = `Round ${currentRound + 1}`;
-            }
-
             // Update round counter
             document.getElementById('round-counter').textContent =
                 `Round ${currentRound + 1} of ${totalRounds}`;
@@ -1085,22 +972,17 @@
                 updatePlayerNode(i, prob, i === presidentId, i === chancellorId, isBad, isHitler);
             }
 
-            // Update side panel - Actual Deck (may be undefined for Hitler election rounds)
+            // Update deck info in table
             if (actualDeck) {
-                document.getElementById('actual-deck-bad').textContent = actualDeck.bad;
-                document.getElementById('actual-deck-good').textContent = actualDeck.good;
+                document.getElementById('table-deck-bad').textContent = actualDeck.bad;
+                document.getElementById('table-deck-good').textContent = actualDeck.good;
+                document.getElementById('table-deck-bad-est').textContent = `~${deckExpected.bad.toFixed(0)}`;
+                document.getElementById('table-deck-good-est').textContent = `~${deckExpected.good.toFixed(0)}`;
             } else {
-                document.getElementById('actual-deck-bad').textContent = '—';
-                document.getElementById('actual-deck-good').textContent = '—';
-            }
-
-            // Update side panel - Expected Deck (show — when actual deck unavailable)
-            if (actualDeck) {
-                document.getElementById('expected-deck-bad').textContent = `~${deckExpected.bad.toFixed(1)}`;
-                document.getElementById('expected-deck-good').textContent = `~${deckExpected.good.toFixed(1)}`;
-            } else {
-                document.getElementById('expected-deck-bad').textContent = '—';
-                document.getElementById('expected-deck-good').textContent = '—';
+                document.getElementById('table-deck-bad').textContent = '—';
+                document.getElementById('table-deck-good').textContent = '—';
+                document.getElementById('table-deck-bad-est').textContent = '—';
+                document.getElementById('table-deck-good-est').textContent = '—';
             }
 
             // Update policy history
