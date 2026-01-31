@@ -150,6 +150,45 @@
             color: var(--color-good);
         }
 
+        .deck-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .deck-table th {
+            font-size: 0.65rem;
+            color: var(--color-text-disabled);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            font-weight: normal;
+            padding: 0 8px 8px 0;
+            text-align: right;
+        }
+
+        .deck-table th:first-child {
+            text-align: left;
+        }
+
+        .deck-table td {
+            padding: 4px 8px 4px 0;
+            font-size: 0.85rem;
+            color: var(--color-text-tertiary);
+        }
+
+        .deck-table td:first-child {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .deck-table td:not(:first-child) {
+            text-align: right;
+        }
+
+        .deck-table .deck-value {
+            font-size: 1rem;
+        }
+
         .dot-bad {
             width: 8px;
             height: 8px;
@@ -845,29 +884,28 @@
         <!-- Side Panel with Deck Info -->
         <div class="side-panel">
             <div class="side-panel-section">
-                <div class="section-header">Actual Deck</div>
-                <div class="section-subheader">(Hidden Info)</div>
-                <div class="deck-row">
-                    <span class="deck-label"><span class="dot-bad"></span> Bad</span>
-                    <span class="deck-value bad" id="actual-deck-bad">11</span>
-                </div>
-                <div class="deck-row">
-                    <span class="deck-label"><span class="dot-good"></span> Good</span>
-                    <span class="deck-value good" id="actual-deck-good">6</span>
-                </div>
-            </div>
-
-            <div class="side-panel-section">
-                <div class="section-header">Expected Deck</div>
-                <div class="section-subheader">(Bayesian Estimate)</div>
-                <div class="deck-row">
-                    <span class="deck-label"><span class="dot-bad"></span> Bad</span>
-                    <span class="deck-value bad" id="expected-deck-bad">~11.0</span>
-                </div>
-                <div class="deck-row">
-                    <span class="deck-label"><span class="dot-good"></span> Good</span>
-                    <span class="deck-value good" id="expected-deck-good">~6.0</span>
-                </div>
+                <div class="section-header">Deck Composition</div>
+                <table class="deck-table">
+                    <thead>
+                        <tr>
+                            <th></th>
+                            <th>Actual</th>
+                            <th>Estimate</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><span class="dot-bad"></span> Bad</td>
+                            <td class="deck-value bad" id="actual-deck-bad">—</td>
+                            <td class="deck-value bad" id="expected-deck-bad">~11.0</td>
+                        </tr>
+                        <tr>
+                            <td><span class="dot-good"></span> Good</td>
+                            <td class="deck-value good" id="actual-deck-good">—</td>
+                            <td class="deck-value good" id="expected-deck-good">~6.0</td>
+                        </tr>
+                    </tbody>
+                </table>
             </div>
         </div>
 
@@ -1047,13 +1085,23 @@
                 updatePlayerNode(i, prob, i === presidentId, i === chancellorId, isBad, isHitler);
             }
 
-            // Update side panel - Actual Deck
-            document.getElementById('actual-deck-bad').textContent = actualDeck.bad;
-            document.getElementById('actual-deck-good').textContent = actualDeck.good;
+            // Update side panel - Actual Deck (may be undefined for Hitler election rounds)
+            if (actualDeck) {
+                document.getElementById('actual-deck-bad').textContent = actualDeck.bad;
+                document.getElementById('actual-deck-good').textContent = actualDeck.good;
+            } else {
+                document.getElementById('actual-deck-bad').textContent = '—';
+                document.getElementById('actual-deck-good').textContent = '—';
+            }
 
-            // Update side panel - Expected Deck
-            document.getElementById('expected-deck-bad').textContent = `~${deckExpected.bad.toFixed(1)}`;
-            document.getElementById('expected-deck-good').textContent = `~${deckExpected.good.toFixed(1)}`;
+            // Update side panel - Expected Deck (show — when actual deck unavailable)
+            if (actualDeck) {
+                document.getElementById('expected-deck-bad').textContent = `~${deckExpected.bad.toFixed(1)}`;
+                document.getElementById('expected-deck-good').textContent = `~${deckExpected.good.toFixed(1)}`;
+            } else {
+                document.getElementById('expected-deck-bad').textContent = '—';
+                document.getElementById('expected-deck-good').textContent = '—';
+            }
 
             // Update policy history
             updatePolicyHistory();
@@ -1062,8 +1110,10 @@
             updatePolicyBoards();
 
             // Update button states
+            // Disable next if at last round OR if current round has game_over
+            const isGameOver = currentRound >= 0 && !!gameData.rounds[currentRound].game_over;
             document.getElementById('btn-prev').disabled = currentRound < 0;
-            document.getElementById('btn-next').disabled = currentRound >= totalRounds - 1;
+            document.getElementById('btn-next').disabled = currentRound >= totalRounds - 1 || isGameOver;
 
             // Update seed display
             const seedValue = gameData.config.seed;
@@ -1173,19 +1223,25 @@
                 slot.classList.toggle('filled', i < badCount);
             }
 
+            // Check for game_over in current round (e.g., Hitler elected chancellor)
+            let winner = null;
+            if (currentRound >= 0 && gameData.rounds[currentRound].game_over) {
+                winner = gameData.rounds[currentRound].winner;
+            }
+
             // Update board winner styling
             const liberalBoard = document.getElementById('liberal-board');
             const fascistBoard = document.getElementById('fascist-board');
-            liberalBoard.classList.toggle('winner', goodCount >= 5);
-            fascistBoard.classList.toggle('winner', badCount >= 6);  // 6 for fascists
+            liberalBoard.classList.toggle('winner', goodCount >= 5 || winner === 'LIBERAL');
+            fascistBoard.classList.toggle('winner', badCount >= 6 || winner === 'FASCIST');
 
             // Update win message
             const winMessage = document.getElementById('win-message');
             winMessage.className = 'win-message';
-            if (goodCount >= 5) {
+            if (goodCount >= 5 || winner === 'LIBERAL') {
                 winMessage.textContent = 'Liberals Win!';
                 winMessage.classList.add('liberal-win');
-            } else if (badCount >= 6) {  // 6 for fascists
+            } else if (badCount >= 6 || winner === 'FASCIST') {
                 winMessage.textContent = 'Fascists Win!';
                 winMessage.classList.add('fascist-win');
             }
