@@ -45,22 +45,22 @@ class TestDeckComposition:
         assert Draw(1, 2) in draws
         assert Draw(0, 3) in draws
 
-    def test_possible_draws_limited_good(self):
-        """Test draws when good policies are limited."""
+    def test_possible_draws_limited_liberal(self):
+        """Test draws when liberal policies are limited."""
         deck = DeckComposition(10, 1)
         draws = deck.possible_draws(3)
 
-        # Can only draw 0 or 1 good
+        # Can only draw 0 or 1 liberal
         assert len(draws) == 2
         assert Draw(3, 0) in draws
         assert Draw(2, 1) in draws
 
-    def test_possible_draws_limited_bad(self):
-        """Test draws when bad policies are limited."""
+    def test_possible_draws_limited_fascist(self):
+        """Test draws when fascist policies are limited."""
         deck = DeckComposition(1, 5)
         draws = deck.possible_draws(3)
 
-        # Can only draw 0 or 1 bad
+        # Can only draw 0 or 1 fascist
         assert len(draws) == 2
         assert Draw(0, 3) in draws
         assert Draw(1, 2) in draws
@@ -76,22 +76,22 @@ class TestDeckComposition:
         """Test specific probability calculations."""
         deck = DeckComposition(11, 6)
 
-        # P(3 bad, 0 good) = C(11,3)*C(6,0) / C(17,3)
+        # P(3 fascist, 0 liberal) = C(11,3)*C(6,0) / C(17,3)
         # = 165 * 1 / 680 = 0.2426...
-        prob_3bad = deck.draw_probability(Draw(3, 0))
-        assert isclose(prob_3bad, 165 / 680, abs_tol=1e-9)
+        prob_3fascist = deck.draw_probability(Draw(3, 0))
+        assert isclose(prob_3fascist, 165 / 680, abs_tol=1e-9)
 
-        # P(0 bad, 3 good) = C(11,0)*C(6,3) / C(17,3)
+        # P(0 fascist, 3 liberal) = C(11,0)*C(6,3) / C(17,3)
         # = 1 * 20 / 680 = 0.0294...
-        prob_3good = deck.draw_probability(Draw(0, 3))
-        assert isclose(prob_3good, 20 / 680, abs_tol=1e-9)
+        prob_3liberal = deck.draw_probability(Draw(0, 3))
+        assert isclose(prob_3liberal, 20 / 680, abs_tol=1e-9)
 
     def test_after_draw(self):
         """Test deck state after removing drawn cards."""
         deck = DeckComposition(11, 6)
         new_deck = deck.after_draw(Draw(2, 1))
-        assert new_deck.bad == 9
-        assert new_deck.good == 5
+        assert new_deck.fascist == 9
+        assert new_deck.liberal == 5
 
 
 # =============================================================================
@@ -102,67 +102,67 @@ class TestDeckComposition:
 class TestStrategy:
     """Tests for optimal play strategy functions."""
 
-    def test_good_president_discards_bad(self):
-        """Good president should discard bad policies when possible."""
-        # Draw (2 bad, 1 good) -> should pass (1 bad, 1 good)
-        passed = president_passes(Draw(2, 1), is_bad=False)
-        assert passed.bad == 1
-        assert passed.good == 1
+    def test_liberal_president_discards_fascist(self):
+        """Liberal president should discard fascist policies when possible."""
+        # Draw (2 fascist, 1 liberal) -> should pass (1 fascist, 1 liberal)
+        passed = president_passes(Draw(2, 1), is_fascist=False)
+        assert passed.fascist == 1
+        assert passed.liberal == 1
 
-        # Draw (3 bad, 0 good) -> must pass (2 bad, 0 good)
-        passed = president_passes(Draw(3, 0), is_bad=False)
-        assert passed.bad == 2
-        assert passed.good == 0
+        # Draw (3 fascist, 0 liberal) -> must pass (2 fascist, 0 liberal)
+        passed = president_passes(Draw(3, 0), is_fascist=False)
+        assert passed.fascist == 2
+        assert passed.liberal == 0
 
-        # Draw (1 bad, 2 good) -> should pass (0 bad, 2 good)
-        passed = president_passes(Draw(1, 2), is_bad=False)
-        assert passed.bad == 0
-        assert passed.good == 2
+        # Draw (1 fascist, 2 liberal) -> should pass (0 fascist, 2 liberal)
+        passed = president_passes(Draw(1, 2), is_fascist=False)
+        assert passed.fascist == 0
+        assert passed.liberal == 2
 
-    def test_bad_president_discards_good(self):
-        """Bad president should discard good policies when possible."""
-        # Draw (2 bad, 1 good) -> should pass (2 bad, 0 good)
-        passed = president_passes(Draw(2, 1), is_bad=True)
-        assert passed.bad == 2
-        assert passed.good == 0
+    def test_fascist_president_discards_liberal(self):
+        """Fascist president should discard liberal policies when possible."""
+        # Draw (2 fascist, 1 liberal) -> should pass (2 fascist, 0 liberal)
+        passed = president_passes(Draw(2, 1), is_fascist=True)
+        assert passed.fascist == 2
+        assert passed.liberal == 0
 
-        # Draw (1 bad, 2 good) -> should pass (1 bad, 1 good)
-        passed = president_passes(Draw(1, 2), is_bad=True)
-        assert passed.bad == 1
-        assert passed.good == 1
+        # Draw (1 fascist, 2 liberal) -> should pass (1 fascist, 1 liberal)
+        passed = president_passes(Draw(1, 2), is_fascist=True)
+        assert passed.fascist == 1
+        assert passed.liberal == 1
 
-        # Draw (0 bad, 3 good) -> must pass (0 bad, 2 good)
-        passed = president_passes(Draw(0, 3), is_bad=True)
-        assert passed.bad == 0
-        assert passed.good == 2
+        # Draw (0 fascist, 3 liberal) -> must pass (0 fascist, 2 liberal)
+        passed = president_passes(Draw(0, 3), is_fascist=True)
+        assert passed.fascist == 0
+        assert passed.liberal == 2
 
-    def test_good_chancellor_enacts_good(self):
-        """Good chancellor should enact good policy when possible."""
-        assert chancellor_enacts(Draw(1, 1), is_bad=False) == Policy.GOOD
-        assert chancellor_enacts(Draw(0, 2), is_bad=False) == Policy.GOOD
-        assert chancellor_enacts(Draw(2, 0), is_bad=False) == Policy.BAD  # forced
+    def test_liberal_chancellor_enacts_liberal(self):
+        """Liberal chancellor should enact liberal policy when possible."""
+        assert chancellor_enacts(Draw(1, 1), is_fascist=False) == Policy.GOOD
+        assert chancellor_enacts(Draw(0, 2), is_fascist=False) == Policy.GOOD
+        assert chancellor_enacts(Draw(2, 0), is_fascist=False) == Policy.BAD  # forced
 
-    def test_bad_chancellor_enacts_bad(self):
-        """Bad chancellor should enact bad policy when possible."""
-        assert chancellor_enacts(Draw(1, 1), is_bad=True) == Policy.BAD
-        assert chancellor_enacts(Draw(2, 0), is_bad=True) == Policy.BAD
-        assert chancellor_enacts(Draw(0, 2), is_bad=True) == Policy.GOOD  # forced
+    def test_fascist_chancellor_enacts_fascist(self):
+        """Fascist chancellor should enact fascist policy when possible."""
+        assert chancellor_enacts(Draw(1, 1), is_fascist=True) == Policy.BAD
+        assert chancellor_enacts(Draw(2, 0), is_fascist=True) == Policy.BAD
+        assert chancellor_enacts(Draw(0, 2), is_fascist=True) == Policy.GOOD  # forced
 
     def test_enacted_policy_combinations(self):
         """Test full enacted policy for various type combinations."""
-        # Both good, draw (2,1): good pres passes (1,1), good chanc enacts GOOD
+        # Both liberal, draw (2,1): liberal pres passes (1,1), liberal chanc enacts GOOD
         assert enacted_policy_for_types(Draw(2, 1), False, False) == Policy.GOOD
 
-        # Both good, draw (3,0): good pres passes (2,0), good chanc forced BAD
+        # Both liberal, draw (3,0): liberal pres passes (2,0), liberal chanc forced BAD
         assert enacted_policy_for_types(Draw(3, 0), False, False) == Policy.BAD
 
-        # Bad pres, good chanc, draw (2,1): bad pres passes (2,0), good chanc forced BAD
+        # Fascist pres, liberal chanc, draw (2,1): fascist pres passes (2,0), forced BAD
         assert enacted_policy_for_types(Draw(2, 1), True, False) == Policy.BAD
 
-        # Good pres, bad chanc, draw (2,1): good pres passes (1,1), bad chanc enacts BAD
+        # Liberal pres, fascist chanc, draw (2,1): liberal pres passes (1,1), enacts BAD
         assert enacted_policy_for_types(Draw(2, 1), False, True) == Policy.BAD
 
-        # Both bad, draw (0,3): bad pres passes (0,2), bad chanc forced GOOD
+        # Both fascist, draw (0,3): fascist pres passes (0,2), fascist chanc forced GOOD
         assert enacted_policy_for_types(Draw(0, 3), True, True) == Policy.GOOD
 
 

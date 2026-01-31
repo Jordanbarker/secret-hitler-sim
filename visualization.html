@@ -6,17 +6,17 @@
     <title>Policy Game - Bayesian Visualization</title>
     <style>
         :root {
-            /* Semantic: Bad (Red) */
-            --color-bad: #ef4444;
-            --color-bad-dark: #dc2626;
-            --color-bad-darker: #991b1b;
-            --color-bad-shadow: rgba(220, 38, 38, 0.4);
+            /* Semantic: Fascist (Red) */
+            --color-fascist: #ef4444;
+            --color-fascist-dark: #dc2626;
+            --color-fascist-darker: #991b1b;
+            --color-fascist-shadow: rgba(220, 38, 38, 0.4);
 
-            /* Semantic: Good (Blue) */
-            --color-good: #3b82f6;
-            --color-good-dark: #2563eb;
-            --color-good-darker: #1d4ed8;
-            --color-good-shadow: rgba(59, 130, 246, 0.4);
+            /* Semantic: Liberal (Blue) */
+            --color-liberal: #3b82f6;
+            --color-liberal-dark: #2563eb;
+            --color-liberal-darker: #1d4ed8;
+            --color-liberal-shadow: rgba(59, 130, 246, 0.4);
 
             /* Surfaces */
             --color-bg-start: #1a1a2e;
@@ -113,19 +113,19 @@
             align-items: center;
         }
 
-        .deck-row-compact .dot-bad,
-        .deck-row-compact .dot-good {
+        .deck-row-compact .dot-fascist,
+        .deck-row-compact .dot-liberal {
             width: 8px;
             height: 8px;
             border-radius: 50%;
         }
 
-        .deck-row-compact .dot-bad {
-            background: var(--color-bad);
+        .deck-row-compact .dot-fascist {
+            background: var(--color-fascist);
         }
 
-        .deck-row-compact .dot-good {
-            background: var(--color-good);
+        .deck-row-compact .dot-liberal {
+            background: var(--color-liberal);
         }
 
         .deck-row-compact .deck-text {
@@ -136,12 +136,12 @@
             font-weight: 600;
         }
 
-        .deck-row-compact .deck-value.bad {
-            color: var(--color-bad);
+        .deck-row-compact .deck-value.fascist {
+            color: var(--color-fascist);
         }
 
-        .deck-row-compact .deck-value.good {
-            color: var(--color-good);
+        .deck-row-compact .deck-value.liberal {
+            color: var(--color-liberal);
         }
 
         .policy-card {
@@ -156,13 +156,13 @@
         }
 
         .policy-card.BAD {
-            background: linear-gradient(145deg, var(--color-bad-dark) 0%, var(--color-bad-darker) 100%);
-            box-shadow: 0 4px 15px var(--color-bad-shadow);
+            background: linear-gradient(145deg, var(--color-fascist-dark) 0%, var(--color-fascist-darker) 100%);
+            box-shadow: 0 4px 15px var(--color-fascist-shadow);
         }
 
         .policy-card.GOOD {
-            background: linear-gradient(145deg, var(--color-good-dark) 0%, var(--color-good-darker) 100%);
-            box-shadow: 0 4px 15px var(--color-good-shadow);
+            background: linear-gradient(145deg, var(--color-liberal-dark) 0%, var(--color-liberal-darker) 100%);
+            box-shadow: 0 4px 15px var(--color-liberal-shadow);
         }
 
         .policy-card.hidden {
@@ -293,12 +293,12 @@
             margin-top: 2px;
         }
 
-        .player-identity.identity-good {
-            color: var(--color-good);
+        .player-identity.identity-liberal {
+            color: var(--color-liberal);
         }
 
-        .player-identity.identity-bad {
-            color: var(--color-bad);
+        .player-identity.identity-fascist {
+            color: var(--color-fascist);
         }
 
         .player-identity.identity-hitler {
@@ -389,9 +389,9 @@
         }
 
         .player-vote .vote-badge.nein {
-            background: linear-gradient(145deg, var(--color-bad) 0%, var(--color-bad-dark) 100%);
+            background: linear-gradient(145deg, var(--color-fascist) 0%, var(--color-fascist-dark) 100%);
             color: white;
-            box-shadow: 0 2px 6px var(--color-bad-shadow);
+            box-shadow: 0 2px 6px var(--color-fascist-shadow);
         }
 
         /* Position votes to the LEFT of each player (opposite side from cards) */
@@ -430,9 +430,9 @@
         }
 
         .btn-next {
-            background: linear-gradient(145deg, var(--color-good) 0%, var(--color-good-dark) 100%);
+            background: linear-gradient(145deg, var(--color-liberal) 0%, var(--color-liberal-dark) 100%);
             color: white;
-            box-shadow: 0 4px 15px var(--color-good-shadow);
+            box-shadow: 0 4px 15px var(--color-liberal-shadow);
         }
 
         .btn-reset {
@@ -493,16 +493,20 @@
         }
 
         .history-dot.BAD {
-            background: var(--color-bad-dark);
+            background: var(--color-fascist-dark);
         }
 
         .history-dot.GOOD {
-            background: var(--color-good-dark);
+            background: var(--color-liberal-dark);
         }
 
         .history-dot.empty {
             background: var(--color-surface);
             border: 1px dashed var(--color-surface-elevated);
+        }
+
+        .history-dot.FAILED {
+            background: #000000;
         }
 
         /* Policy Boards */
@@ -525,14 +529,14 @@
         }
 
         .policy-board.liberal {
-            background: linear-gradient(145deg, var(--color-good-dark) 0%, var(--color-good-darker) 100%);
-            box-shadow: 0 4px 20px var(--color-good-shadow);
+            background: linear-gradient(145deg, var(--color-liberal-dark) 0%, var(--color-liberal-darker) 100%);
+            box-shadow: 0 4px 20px var(--color-liberal-shadow);
         }
 
         .policy-board.fascist {
             width: 380px;        /* Wider for 6 slots */
-            background: linear-gradient(145deg, var(--color-bad-dark) 0%, var(--color-bad-darker) 100%);
-            box-shadow: 0 4px 20px var(--color-bad-shadow);
+            background: linear-gradient(145deg, var(--color-fascist-dark) 0%, var(--color-fascist-darker) 100%);
+            box-shadow: 0 4px 20px var(--color-fascist-shadow);
         }
 
         .policy-board-title {
@@ -551,12 +555,12 @@
         }
 
         .policy-board.liberal .policy-board-title {
-            background: var(--color-good-darker);
+            background: var(--color-liberal-darker);
             color: var(--color-text);
         }
 
         .policy-board.fascist .policy-board-title {
-            background: var(--color-bad-darker);
+            background: var(--color-fascist-darker);
             color: var(--color-text);
         }
 
@@ -598,13 +602,13 @@
 
         .win-message.liberal-win {
             display: block;
-            background: var(--color-good-dark);
+            background: var(--color-liberal-dark);
             color: white;
         }
 
         .win-message.fascist-win {
             display: block;
-            background: var(--color-bad-dark);
+            background: var(--color-fascist-dark);
             color: white;
         }
 
@@ -630,14 +634,14 @@
             transition: all 0.3s ease;
         }
 
-        .card.bad {
-            background: linear-gradient(145deg, var(--color-bad) 0%, var(--color-bad-dark) 100%);
-            box-shadow: 0 2px 8px var(--color-bad-shadow);
+        .card.fascist {
+            background: linear-gradient(145deg, var(--color-fascist) 0%, var(--color-fascist-dark) 100%);
+            box-shadow: 0 2px 8px var(--color-fascist-shadow);
         }
 
-        .card.good {
-            background: linear-gradient(145deg, var(--color-good) 0%, var(--color-good-dark) 100%);
-            box-shadow: 0 2px 8px var(--color-good-shadow);
+        .card.liberal {
+            background: linear-gradient(145deg, var(--color-liberal) 0%, var(--color-liberal-dark) 100%);
+            box-shadow: 0 2px 8px var(--color-liberal-shadow);
         }
 
         .card.discarded {
@@ -680,16 +684,16 @@
             <div class="table">
                 <div class="deck-info-compact">
                     <div class="deck-row-compact">
-                        <span class="dot-bad"></span>
-                        <span class="deck-text">Bad:</span>
-                        <span class="deck-value bad" id="table-deck-bad">11</span>
-                        <span class="deck-text">(<span id="table-deck-bad-est">~11</span>)</span>
+                        <span class="dot-fascist"></span>
+                        <span class="deck-text">Fascist:</span>
+                        <span class="deck-value fascist" id="table-deck-fascist">11</span>
+                        <span class="deck-text">(<span id="table-deck-fascist-est">~11</span>)</span>
                     </div>
                     <div class="deck-row-compact">
-                        <span class="dot-good"></span>
-                        <span class="deck-text">Good:</span>
-                        <span class="deck-value good" id="table-deck-good">6</span>
-                        <span class="deck-text">(<span id="table-deck-good-est">~6</span>)</span>
+                        <span class="dot-liberal"></span>
+                        <span class="deck-text">Liberal:</span>
+                        <span class="deck-value liberal" id="table-deck-liberal">6</span>
+                        <span class="deck-text">(<span id="table-deck-liberal-est">~6</span>)</span>
                     </div>
                 </div>
                 <div class="policy-card hidden" id="policy-card">—</div>
@@ -709,7 +713,7 @@
                 </div>
                 <div class="player-name">Player 0</div>
                 <div class="player-identity" id="identity-0">Good</div>
-                <div class="player-prob" id="prob-0">P(bad): 33.3%</div>
+                <div class="player-prob" id="prob-0">P(Fascist): 33.3%</div>
                 <div class="player-cards" id="cards-0"></div>
                 <div class="player-vote" id="vote-0"></div>
             </div>
@@ -727,7 +731,7 @@
                 </div>
                 <div class="player-name">Player 1</div>
                 <div class="player-identity" id="identity-1">Good</div>
-                <div class="player-prob" id="prob-1">P(bad): 33.3%</div>
+                <div class="player-prob" id="prob-1">P(Fascist): 33.3%</div>
                 <div class="player-cards" id="cards-1"></div>
                 <div class="player-vote" id="vote-1"></div>
             </div>
@@ -745,7 +749,7 @@
                 </div>
                 <div class="player-name">Player 2</div>
                 <div class="player-identity" id="identity-2">Good</div>
-                <div class="player-prob" id="prob-2">P(bad): 33.3%</div>
+                <div class="player-prob" id="prob-2">P(Fascist): 33.3%</div>
                 <div class="player-cards" id="cards-2"></div>
                 <div class="player-vote" id="vote-2"></div>
             </div>
@@ -763,7 +767,7 @@
                 </div>
                 <div class="player-name">Player 3</div>
                 <div class="player-identity" id="identity-3">Good</div>
-                <div class="player-prob" id="prob-3">P(bad): 33.3%</div>
+                <div class="player-prob" id="prob-3">P(Fascist): 33.3%</div>
                 <div class="player-cards" id="cards-3"></div>
                 <div class="player-vote" id="vote-3"></div>
             </div>
@@ -781,7 +785,7 @@
                 </div>
                 <div class="player-name">Player 4</div>
                 <div class="player-identity" id="identity-4">Good</div>
-                <div class="player-prob" id="prob-4">P(bad): 33.3%</div>
+                <div class="player-prob" id="prob-4">P(Fascist): 33.3%</div>
                 <div class="player-cards" id="cards-4"></div>
                 <div class="player-vote" id="vote-4"></div>
             </div>
@@ -799,7 +803,7 @@
                 </div>
                 <div class="player-name">Player 5</div>
                 <div class="player-identity" id="identity-5">Good</div>
-                <div class="player-prob" id="prob-5">P(bad): 33.3%</div>
+                <div class="player-prob" id="prob-5">P(Fascist): 33.3%</div>
                 <div class="player-cards" id="cards-5"></div>
                 <div class="player-vote" id="vote-5"></div>
             </div>
@@ -963,26 +967,26 @@
             }
 
             // Update player nodes
-            const badPlayers = gameData.config.bad_players || [];
+            const fascistPlayers = gameData.config.fascist_players || [];
             const hitlerId = gameData.config.hitler_id;
             for (let i = 0; i < 6; i++) {
                 const prob = beliefs[i.toString()];
-                const isBad = badPlayers.includes(i);
+                const isFascist = fascistPlayers.includes(i);
                 const isHitler = i === hitlerId;
-                updatePlayerNode(i, prob, i === presidentId, i === chancellorId, isBad, isHitler);
+                updatePlayerNode(i, prob, i === presidentId, i === chancellorId, isFascist, isHitler);
             }
 
             // Update deck info in table
             if (actualDeck) {
-                document.getElementById('table-deck-bad').textContent = actualDeck.bad;
-                document.getElementById('table-deck-good').textContent = actualDeck.good;
-                document.getElementById('table-deck-bad-est').textContent = `~${deckExpected.bad.toFixed(0)}`;
-                document.getElementById('table-deck-good-est').textContent = `~${deckExpected.good.toFixed(0)}`;
+                document.getElementById('table-deck-fascist').textContent = actualDeck.fascist;
+                document.getElementById('table-deck-liberal').textContent = actualDeck.liberal;
+                document.getElementById('table-deck-fascist-est').textContent = `~${deckExpected.fascist.toFixed(0)}`;
+                document.getElementById('table-deck-liberal-est').textContent = `~${deckExpected.liberal.toFixed(0)}`;
             } else {
-                document.getElementById('table-deck-bad').textContent = '—';
-                document.getElementById('table-deck-good').textContent = '—';
-                document.getElementById('table-deck-bad-est').textContent = '—';
-                document.getElementById('table-deck-good-est').textContent = '—';
+                document.getElementById('table-deck-fascist').textContent = '—';
+                document.getElementById('table-deck-liberal').textContent = '—';
+                document.getElementById('table-deck-fascist-est').textContent = '—';
+                document.getElementById('table-deck-liberal-est').textContent = '—';
             }
 
             // Update policy history
@@ -1017,7 +1021,7 @@
             return `rgb(${r}, ${g}, ${b})`;
         }
 
-        function updatePlayerNode(playerId, probability, isPresident, isChancellor, isBad, isHitler) {
+        function updatePlayerNode(playerId, probability, isPresident, isChancellor, isFascist, isHitler) {
             const playerEl = document.getElementById(`player-${playerId}`);
             const probEl = document.getElementById(`prob-${playerId}`);
             const identityEl = document.getElementById(`identity-${playerId}`);
@@ -1027,7 +1031,7 @@
 
             // Update probability text
             const pct = (probability * 100).toFixed(1);
-            probEl.textContent = `P(bad): ${pct}%`;
+            probEl.textContent = `P(Fascist): ${pct}%`;
 
             // Update color using gradient from grey to red
             const color = getGradientColor(probability);
@@ -1053,13 +1057,13 @@
             if (identityEl) {
                 if (isHitler) {
                     identityEl.textContent = 'Hitler';
-                    identityEl.classList.remove('identity-bad', 'identity-good');
+                    identityEl.classList.remove('identity-fascist', 'identity-liberal');
                     identityEl.classList.add('identity-hitler');
                 } else {
-                    identityEl.textContent = isBad ? 'Bad' : 'Good';
+                    identityEl.textContent = isFascist ? 'Fascist' : 'Liberal';
                     identityEl.classList.remove('identity-hitler');
-                    identityEl.classList.toggle('identity-bad', isBad);
-                    identityEl.classList.toggle('identity-good', !isBad);
+                    identityEl.classList.toggle('identity-fascist', isFascist);
+                    identityEl.classList.toggle('identity-liberal', !isFascist);
                 }
             }
         }
@@ -1072,7 +1076,8 @@
             for (let i = 0; i < totalRounds; i++) {
                 if (i <= currentRound && currentRound >= 0) {
                     const policy = gameData.rounds[i].enacted;
-                    html += `<div class="history-dot ${policy}"></div>`;
+                    const dotClass = policy || 'FAILED';
+                    html += `<div class="history-dot ${dotClass}"></div>`;
                 } else {
                     html += `<div class="history-dot empty"></div>`;
                 }
@@ -1082,27 +1087,27 @@
 
         function updatePolicyBoards() {
             // Count enacted policies up to current round
-            let goodCount = 0;
-            let badCount = 0;
+            let liberalCount = 0;
+            let fascistCount = 0;
 
             if (currentRound >= 0) {
                 for (let i = 0; i <= currentRound; i++) {
                     const policy = gameData.rounds[i].enacted;
-                    if (policy === 'GOOD') goodCount++;
-                    else if (policy === 'BAD') badCount++;
+                    if (policy === 'GOOD') liberalCount++;
+                    else if (policy === 'BAD') fascistCount++;
                 }
             }
 
             // Update Liberal board slots
             for (let i = 0; i < 5; i++) {
                 const slot = document.getElementById(`liberal-slot-${i}`);
-                slot.classList.toggle('filled', i < goodCount);
+                slot.classList.toggle('filled', i < liberalCount);
             }
 
             // Update Fascist board slots (6 slots)
             for (let i = 0; i < 6; i++) {
                 const slot = document.getElementById(`fascist-slot-${i}`);
-                slot.classList.toggle('filled', i < badCount);
+                slot.classList.toggle('filled', i < fascistCount);
             }
 
             // Check for game_over in current round (e.g., Hitler elected chancellor)
@@ -1114,16 +1119,16 @@
             // Update board winner styling
             const liberalBoard = document.getElementById('liberal-board');
             const fascistBoard = document.getElementById('fascist-board');
-            liberalBoard.classList.toggle('winner', goodCount >= 5 || winner === 'LIBERAL');
-            fascistBoard.classList.toggle('winner', badCount >= 6 || winner === 'FASCIST');
+            liberalBoard.classList.toggle('winner', liberalCount >= 5 || winner === 'LIBERAL');
+            fascistBoard.classList.toggle('winner', fascistCount >= 6 || winner === 'FASCIST');
 
             // Update win message
             const winMessage = document.getElementById('win-message');
             winMessage.className = 'win-message';
-            if (goodCount >= 5 || winner === 'LIBERAL') {
+            if (liberalCount >= 5 || winner === 'LIBERAL') {
                 winMessage.textContent = 'Liberals Win!';
                 winMessage.classList.add('liberal-win');
-            } else if (badCount >= 6 || winner === 'FASCIST') {
+            } else if (fascistCount >= 6 || winner === 'FASCIST') {
                 winMessage.textContent = 'Fascists Win!';
                 winMessage.classList.add('fascist-win');
             }
@@ -1135,59 +1140,59 @@
 
         /**
          * Determine what president passes to chancellor.
-         * Good president: discards BAD first (keeps GOOD)
-         * Bad president: discards GOOD first (keeps BAD)
-         * @param {object} draw - {bad: number, good: number}
-         * @param {boolean} isBad - whether president is bad
-         * @returns {object} - {bad: number, good: number} what's passed
+         * Liberal president: discards Fascist first (keeps Liberal)
+         * Fascist president: discards Liberal first (keeps Fascist)
+         * @param {object} draw - {fascist: number, liberal: number}
+         * @param {boolean} isFascist - whether president is fascist
+         * @returns {object} - {fascist: number, liberal: number} what's passed
          */
-        function presidentPasses(draw, isBad) {
-            const total = draw.bad + draw.good;
+        function presidentPasses(draw, isFascist) {
+            const total = draw.fascist + draw.liberal;
             const passCount = 2;
             const discardCount = total - passCount;
 
-            let badDiscarded, goodDiscarded;
-            if (isBad) {
-                // Bad president discards good policies first
-                goodDiscarded = Math.min(draw.good, discardCount);
-                badDiscarded = discardCount - goodDiscarded;
+            let fascistDiscarded, liberalDiscarded;
+            if (isFascist) {
+                // Fascist president discards liberal policies first
+                liberalDiscarded = Math.min(draw.liberal, discardCount);
+                fascistDiscarded = discardCount - liberalDiscarded;
             } else {
-                // Good president discards bad policies first
-                badDiscarded = Math.min(draw.bad, discardCount);
-                goodDiscarded = discardCount - badDiscarded;
+                // Liberal president discards fascist policies first
+                fascistDiscarded = Math.min(draw.fascist, discardCount);
+                liberalDiscarded = discardCount - fascistDiscarded;
             }
 
             return {
-                bad: draw.bad - badDiscarded,
-                good: draw.good - goodDiscarded
+                fascist: draw.fascist - fascistDiscarded,
+                liberal: draw.liberal - liberalDiscarded
             };
         }
 
         /**
          * Determine what policy chancellor enacts.
-         * Good chancellor: enacts GOOD if available
-         * Bad chancellor: enacts BAD if available
-         * @param {object} received - {bad: number, good: number}
-         * @param {boolean} isBad - whether chancellor is bad
+         * Liberal chancellor: enacts Liberal if available
+         * Fascist chancellor: enacts Fascist if available
+         * @param {object} received - {fascist: number, liberal: number}
+         * @param {boolean} isFascist - whether chancellor is fascist
          * @returns {string} - 'BAD' or 'GOOD'
          */
-        function chancellorEnacts(received, isBad) {
-            if (isBad) {
-                return received.bad > 0 ? 'BAD' : 'GOOD';
+        function chancellorEnacts(received, isFascist) {
+            if (isFascist) {
+                return received.fascist > 0 ? 'BAD' : 'GOOD';
             } else {
-                return received.good > 0 ? 'GOOD' : 'BAD';
+                return received.liberal > 0 ? 'GOOD' : 'BAD';
             }
         }
 
         /**
          * Convert draw to array of card types.
-         * @param {object} draw - {bad: number, good: number}
+         * @param {object} draw - {fascist: number, liberal: number}
          * @returns {string[]} - array like ['BAD', 'BAD', 'GOOD']
          */
         function drawToCards(draw) {
             const cards = [];
-            for (let i = 0; i < draw.bad; i++) cards.push('BAD');
-            for (let i = 0; i < draw.good; i++) cards.push('GOOD');
+            for (let i = 0; i < draw.fascist; i++) cards.push('BAD');
+            for (let i = 0; i < draw.liberal; i++) cards.push('GOOD');
             return cards;
         }
 
@@ -1200,7 +1205,7 @@
          */
         function renderCardHand(cards, discardedIndex, enactedIndex) {
             return cards.map((card, i) => {
-                const typeClass = card === 'BAD' ? 'bad' : 'good';
+                const typeClass = card === 'BAD' ? 'fascist' : 'liberal';
                 const discardedClass = i === discardedIndex ? 'discarded' : '';
                 const enactedClass = i === enactedIndex ? 'enacted' : '';
                 return `<div class="card ${typeClass} ${discardedClass} ${enactedClass}"></div>`;
@@ -1249,7 +1254,7 @@
             // Handle chaos rounds (top card flipped)
             if (roundType === 'CHAOS') {
                 const enacted = round.enacted;
-                const cardClass = enacted === 'BAD' ? 'bad' : 'good';
+                const cardClass = enacted === 'BAD' ? 'fascist' : 'liberal';
                 presidentContainer.innerHTML = `
                     <div class="card-section">
                         <div class="card-label">Chaos</div>
@@ -1267,19 +1272,19 @@
                 return;
             }
 
-            const badPlayers = gameData.config.bad_players || [];
-            const presidentIsBad = badPlayers.includes(presidentId);
+            const fascistPlayers = gameData.config.fascist_players || [];
+            const presidentIsFascist = fascistPlayers.includes(presidentId);
             const enacted = round.enacted;
 
             // Calculate what president passed
-            const passed = presidentPasses(actualDraw, presidentIsBad);
+            const passed = presidentPasses(actualDraw, presidentIsFascist);
 
             // Build president's hand (3 cards)
             const presCards = drawToCards(actualDraw);
 
             // Figure out which card the president discarded
             let discardedType;
-            if (actualDraw.bad > passed.bad) {
+            if (actualDraw.fascist > passed.fascist) {
                 discardedType = 'BAD';
             } else {
                 discardedType = 'GOOD';

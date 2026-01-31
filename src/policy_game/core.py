@@ -42,28 +42,28 @@ class Role(Enum):
 class Draw:
     """Represents a draw of policies from the deck."""
 
-    bad: int
-    good: int
+    fascist: int
+    liberal: int
 
     @property
     def total(self) -> int:
-        return self.bad + self.good
+        return self.fascist + self.liberal
 
     def __iter__(self) -> Iterator[int]:
-        yield self.bad
-        yield self.good
+        yield self.fascist
+        yield self.liberal
 
 
 @dataclass(frozen=True)
 class DeckComposition:
     """Represents a possible deck state."""
 
-    bad: int
-    good: int
+    fascist: int
+    liberal: int
 
     @property
     def total(self) -> int:
-        return self.bad + self.good
+        return self.fascist + self.liberal
 
     def can_draw(self, draw_count: int) -> bool:
         """Check if this deck can support drawing draw_count cards."""
@@ -72,10 +72,12 @@ class DeckComposition:
     def possible_draws(self, draw_count: int) -> list[Draw]:
         """Generate all possible draws of draw_count cards from this deck."""
         draws = []
-        for bad_drawn in range(max(0, draw_count - self.good), min(draw_count, self.bad) + 1):
-            good_drawn = draw_count - bad_drawn
-            if good_drawn <= self.good:
-                draws.append(Draw(bad_drawn, good_drawn))
+        for fascist_drawn in range(
+            max(0, draw_count - self.liberal), min(draw_count, self.fascist) + 1
+        ):
+            liberal_drawn = draw_count - fascist_drawn
+            if liberal_drawn <= self.liberal:
+                draws.append(Draw(fascist_drawn, liberal_drawn))
         return draws
 
     def draw_probability(self, draw: Draw) -> float:
@@ -83,18 +85,18 @@ class DeckComposition:
         Calculate probability of drawing exactly this combination.
         Uses hypergeometric distribution.
         """
-        if draw.bad > self.bad or draw.good > self.good:
+        if draw.fascist > self.fascist or draw.liberal > self.liberal:
             return 0.0
         if draw.total > self.total:
             return 0.0
 
-        numerator = comb(self.bad, draw.bad) * comb(self.good, draw.good)
+        numerator = comb(self.fascist, draw.fascist) * comb(self.liberal, draw.liberal)
         denominator = comb(self.total, draw.total)
         return numerator / denominator if denominator > 0 else 0.0
 
     def after_draw(self, draw: Draw) -> DeckComposition:
         """Return deck state after removing drawn cards."""
-        return DeckComposition(self.bad - draw.bad, self.good - draw.good)
+        return DeckComposition(self.fascist - draw.fascist, self.liberal - draw.liberal)
 
 
 # =============================================================================
@@ -173,16 +175,16 @@ class ElectionTracker:
 # =============================================================================
 
 
-def president_passes(draw: Draw, is_bad: bool, pass_count: int = 2) -> Draw:
+def president_passes(draw: Draw, is_fascist: bool, pass_count: int = 2) -> Draw:
     """
     Determine what the president passes to the chancellor.
 
-    Good president: Maximizes good policies passed (discards bad if possible)
-    Bad president: Maximizes bad policies passed (discards good if possible)
+    Liberal president: Maximizes liberal policies passed (discards fascist if possible)
+    Fascist president: Maximizes fascist policies passed (discards liberal if possible)
 
     Args:
         draw: The cards drawn by the president
-        is_bad: Whether the president is a bad player
+        is_fascist: Whether the president is a fascist player
         pass_count: Number of cards to pass (default 2)
 
     Returns:
@@ -190,48 +192,48 @@ def president_passes(draw: Draw, is_bad: bool, pass_count: int = 2) -> Draw:
     """
     discard_count = draw.total - pass_count
 
-    if is_bad:
-        # Bad president discards good policies first
-        good_discarded = min(draw.good, discard_count)
-        bad_discarded = discard_count - good_discarded
+    if is_fascist:
+        # Fascist president discards liberal policies first
+        liberal_discarded = min(draw.liberal, discard_count)
+        fascist_discarded = discard_count - liberal_discarded
     else:
-        # Good president discards bad policies first
-        bad_discarded = min(draw.bad, discard_count)
-        good_discarded = discard_count - bad_discarded
+        # Liberal president discards fascist policies first
+        fascist_discarded = min(draw.fascist, discard_count)
+        liberal_discarded = discard_count - fascist_discarded
 
-    return Draw(draw.bad - bad_discarded, draw.good - good_discarded)
+    return Draw(draw.fascist - fascist_discarded, draw.liberal - liberal_discarded)
 
 
-def chancellor_enacts(received: Draw, is_bad: bool) -> Policy:
+def chancellor_enacts(received: Draw, is_fascist: bool) -> Policy:
     """
     Determine what policy the chancellor enacts.
 
-    Good chancellor: Enacts good policy if available
-    Bad chancellor: Enacts bad policy if available
+    Liberal chancellor: Enacts liberal policy if available
+    Fascist chancellor: Enacts fascist policy if available
 
     Args:
         received: The cards received from president
-        is_bad: Whether the chancellor is a bad player
+        is_fascist: Whether the chancellor is a fascist player
 
     Returns:
         The policy that gets enacted
     """
-    if is_bad:
-        # Bad chancellor enacts bad if possible
-        return Policy.BAD if received.bad > 0 else Policy.GOOD
+    if is_fascist:
+        # Fascist chancellor enacts fascist if possible
+        return Policy.BAD if received.fascist > 0 else Policy.GOOD
     else:
-        # Good chancellor enacts good if possible
-        return Policy.GOOD if received.good > 0 else Policy.BAD
+        # Liberal chancellor enacts liberal if possible
+        return Policy.GOOD if received.liberal > 0 else Policy.BAD
 
 
 def enacted_policy_for_types(
-    draw: Draw, president_bad: bool, chancellor_bad: bool, pass_count: int = 2
+    draw: Draw, president_fascist: bool, chancellor_fascist: bool, pass_count: int = 2
 ) -> Policy:
     """
     Determine what policy gets enacted given a draw and player types.
     """
-    passed = president_passes(draw, president_bad, pass_count)
-    return chancellor_enacts(passed, chancellor_bad)
+    passed = president_passes(draw, president_fascist, pass_count)
+    return chancellor_enacts(passed, chancellor_fascist)
 
 
 # =============================================================================
@@ -240,7 +242,6 @@ def enacted_policy_for_types(
 
 
 def liberal_voting_strategy(
-    voter_id: int,
     president_id: int,
     chancellor_id: int,
     suspicions: dict[int, float],
@@ -274,7 +275,6 @@ def liberal_voting_strategy(
 
 
 def fascist_voting_strategy(
-    voter_id: int,
     president_id: int,
     chancellor_id: int,
     is_fascist: dict[int, bool],
@@ -308,7 +308,6 @@ def fascist_voting_strategy(
 
 
 def hitler_voting_strategy(
-    voter_id: int,
     president_id: int,
     chancellor_id: int,
     suspicions: dict[int, float],

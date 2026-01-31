@@ -26,10 +26,10 @@ class TestSchemaValidation:
 
         # Config fields
         assert "num_players" in game["config"]
-        assert "bad_players" in game["config"]
+        assert "fascist_players" in game["config"]
         assert "hitler_id" in game["config"]
         assert "initial_deck" in game["config"]
-        assert "prior_bad_prob" in game["config"]
+        assert "prior_fascist_prob" in game["config"]
 
         # Initial state fields
         assert "player_beliefs" in game["initial_state"]
@@ -119,70 +119,70 @@ class TestPlayerBeliefsFormat:
 
 
 class TestDeckStructure:
-    """Verify deck objects have required bad/good fields."""
+    """Verify deck objects have required fascist/liberal fields."""
 
     def test_deck_structure(self):
-        """Deck objects must have 'bad' and 'good' fields."""
+        """Deck objects must have 'fascist' and 'liberal' fields."""
         game = generate_game(seed=42)
 
         # Initial deck in config
-        assert "bad" in game["config"]["initial_deck"]
-        assert "good" in game["config"]["initial_deck"]
+        assert "fascist" in game["config"]["initial_deck"]
+        assert "liberal" in game["config"]["initial_deck"]
 
         # Initial state deck_expected
-        assert "bad" in game["initial_state"]["deck_expected"]
-        assert "good" in game["initial_state"]["deck_expected"]
+        assert "fascist" in game["initial_state"]["deck_expected"]
+        assert "liberal" in game["initial_state"]["deck_expected"]
 
         # Each round must have deck_expected
         for i, round_data in enumerate(game["rounds"]):
             assert "deck_expected" in round_data, f"Round {i + 1} missing deck_expected"
-            assert "bad" in round_data["deck_expected"], (
-                f"Round {i + 1} deck_expected missing 'bad'"
+            assert "fascist" in round_data["deck_expected"], (
+                f"Round {i + 1} deck_expected missing 'fascist'"
             )
-            assert "good" in round_data["deck_expected"], (
-                f"Round {i + 1} deck_expected missing 'good'"
+            assert "liberal" in round_data["deck_expected"], (
+                f"Round {i + 1} deck_expected missing 'liberal'"
             )
 
 
 class TestPoliciesEnactedStructure:
-    """Verify policies_enacted has bad/good counts."""
+    """Verify policies_enacted has fascist/liberal counts."""
 
     def test_policies_enacted_structure(self):
-        """policies_enacted must have 'bad' and 'good' integer counts."""
+        """policies_enacted must have 'fascist' and 'liberal' integer counts."""
         game = generate_game(seed=42)
 
         for i, round_data in enumerate(game["rounds"]):
             assert "policies_enacted" in round_data, f"Round {i + 1} missing policies_enacted"
 
             pe = round_data["policies_enacted"]
-            assert "bad" in pe, f"Round {i + 1} policies_enacted missing 'bad'"
-            assert "good" in pe, f"Round {i + 1} policies_enacted missing 'good'"
-            assert isinstance(pe["bad"], int), (
-                f"Round {i + 1} policies_enacted['bad'] is not int: {type(pe['bad'])}"
+            assert "fascist" in pe, f"Round {i + 1} policies_enacted missing 'fascist'"
+            assert "liberal" in pe, f"Round {i + 1} policies_enacted missing 'liberal'"
+            assert isinstance(pe["fascist"], int), (
+                f"Round {i + 1} policies_enacted['fascist'] is not int: {type(pe['fascist'])}"
             )
-            assert isinstance(pe["good"], int), (
-                f"Round {i + 1} policies_enacted['good'] is not int: {type(pe['good'])}"
+            assert isinstance(pe["liberal"], int), (
+                f"Round {i + 1} policies_enacted['liberal'] is not int: {type(pe['liberal'])}"
             )
-            assert pe["bad"] >= 0, f"Round {i + 1} policies_enacted['bad'] is negative"
-            assert pe["good"] >= 0, f"Round {i + 1} policies_enacted['good'] is negative"
+            assert pe["fascist"] >= 0, f"Round {i + 1} policies_enacted['fascist'] is negative"
+            assert pe["liberal"] >= 0, f"Round {i + 1} policies_enacted['liberal'] is negative"
 
     def test_policies_enacted_monotonic(self):
         """policies_enacted counts should never decrease."""
         game = generate_game(seed=42)
 
-        prev_bad = 0
-        prev_good = 0
+        prev_fascist = 0
+        prev_liberal = 0
 
         for i, round_data in enumerate(game["rounds"]):
             pe = round_data["policies_enacted"]
-            assert pe["bad"] >= prev_bad, (
-                f"Round {i + 1} bad policies decreased: {pe['bad']} < {prev_bad}"
+            assert pe["fascist"] >= prev_fascist, (
+                f"Round {i + 1} fascist policies decreased: {pe['fascist']} < {prev_fascist}"
             )
-            assert pe["good"] >= prev_good, (
-                f"Round {i + 1} good policies decreased: {pe['good']} < {prev_good}"
+            assert pe["liberal"] >= prev_liberal, (
+                f"Round {i + 1} liberal policies decreased: {pe['liberal']} < {prev_liberal}"
             )
-            prev_bad = pe["bad"]
-            prev_good = pe["good"]
+            prev_fascist = pe["fascist"]
+            prev_liberal = pe["liberal"]
 
 
 class TestRoundRequiredFields:
@@ -231,8 +231,8 @@ class TestFinalState:
 
         assert "game_over" in final
         assert "policies_enacted" in final
-        assert "bad" in final["policies_enacted"]
-        assert "good" in final["policies_enacted"]
+        assert "fascist" in final["policies_enacted"]
+        assert "liberal" in final["policies_enacted"]
 
         # If game is over, winner and win_condition should be present
         if final["game_over"]:

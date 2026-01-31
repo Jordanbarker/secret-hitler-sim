@@ -12,9 +12,9 @@ import random
 from pathlib import Path
 
 from .constants import (
-    BAD_POLICIES,
-    GOOD_POLICIES,
-    INITIAL_PRIOR_BAD_PROB,
+    FASCIST_POLICIES,
+    INITIAL_PRIOR_FASCIST_PROB,
+    LIBERAL_POLICIES,
     NUM_FASCISTS,
     NUM_PLAYERS,
 )
@@ -33,24 +33,24 @@ from .core import (
 from .simulation import GameSimulation, GameState, PlayerRoles, RoundType
 
 
-def simulate_actual_draw(deck_bad: int, deck_good: int, draw_count: int = 3) -> Draw:
+def simulate_actual_draw(deck_fascist: int, deck_liberal: int, draw_count: int = 3) -> Draw:
     """
     Simulate an actual draw from the deck.
     Returns what cards were actually drawn.
     """
-    deck = ["BAD"] * deck_bad + ["GOOD"] * deck_good
+    deck = ["BAD"] * deck_fascist + ["GOOD"] * deck_liberal
     drawn = random.sample(deck, min(draw_count, len(deck)))
     return Draw(drawn.count("BAD"), drawn.count("GOOD"))
 
 
 def determine_enacted_policy(
-    draw: Draw, president_is_bad: bool, chancellor_is_bad: bool, pass_count: int = 2
+    draw: Draw, president_is_fascist: bool, chancellor_is_fascist: bool, pass_count: int = 2
 ) -> Policy:
     """
     Given actual draw and true player types, determine what gets enacted.
     """
-    passed = president_passes(draw, president_is_bad, pass_count)
-    return chancellor_enacts(passed, chancellor_is_bad)
+    passed = president_passes(draw, president_is_fascist, pass_count)
+    return chancellor_enacts(passed, chancellor_is_fascist)
 
 
 def conduct_vote(
@@ -60,7 +60,7 @@ def conduct_vote(
     player_roles: PlayerRoles,
     suspicions: dict[int, float],
     election_tracker: int,
-    bad_policies_enacted: int,
+    fascist_policies_enacted: int,
 ) -> VoteRecord:
     """
     Conduct a vote on a chancellor nomination.
@@ -77,32 +77,29 @@ def conduct_vote(
 
         if role == Role.LIBERAL:
             vote = liberal_voting_strategy(
-                voter_id=voter_id,
                 president_id=president_id,
                 chancellor_id=chancellor_id,
                 suspicions=suspicions,
                 election_tracker=election_tracker,
-                bad_policies_enacted=bad_policies_enacted,
+                bad_policies_enacted=fascist_policies_enacted,
             )
         elif role == Role.FASCIST:
             vote = fascist_voting_strategy(
-                voter_id=voter_id,
                 president_id=president_id,
                 chancellor_id=chancellor_id,
                 is_fascist=is_fascist,
                 hitler_id=player_roles.hitler_id,
-                bad_policies_enacted=bad_policies_enacted,
+                bad_policies_enacted=fascist_policies_enacted,
                 election_tracker=election_tracker,
             )
         else:  # HITLER
             vote = hitler_voting_strategy(
-                voter_id=voter_id,
                 president_id=president_id,
                 chancellor_id=chancellor_id,
                 suspicions=suspicions,
                 is_fascist=is_fascist,
                 election_tracker=election_tracker,
-                bad_policies_enacted=bad_policies_enacted,
+                bad_policies_enacted=fascist_policies_enacted,
             )
 
         votes.votes[voter_id] = vote
@@ -130,14 +127,14 @@ def choose_chancellor_nomination(
     eligible_candidates: list[int],
     player_roles: PlayerRoles,
     suspicions: dict[int, float],
-    bad_policies_enacted: int,
+    fascist_policies_enacted: int,
 ) -> int:
     """
     President chooses a chancellor from eligible candidates.
 
     Strategy varies by role:
     - Liberal: Choose least suspicious eligible player
-    - Fascist: Choose fellow fascist if possible, or Hitler after 3 BAD policies
+    - Fascist: Choose fellow fascist if possible, or Hitler after 3 Fascist policies
     - Hitler: Choose least suspicious to appear liberal
     """
     if not eligible_candidates:
@@ -146,8 +143,8 @@ def choose_chancellor_nomination(
     role = player_roles.get_role(president_id)
 
     if role == Role.FASCIST:
-        # Try to nominate Hitler after 3 BAD policies (win condition)
-        if bad_policies_enacted >= 3 and player_roles.hitler_id in eligible_candidates:
+        # Try to nominate Hitler after 3 Fascist policies (win condition)
+        if fascist_policies_enacted >= 3 and player_roles.hitler_id in eligible_candidates:
             return player_roles.hitler_id
         # Otherwise prefer fellow fascists
         for candidate in eligible_candidates:
@@ -161,21 +158,21 @@ def choose_chancellor_nomination(
     return sorted_candidates[0]
 
 
-def flip_top_policy(deck_bad: int, deck_good: int) -> tuple[Policy, int, int]:
+def flip_top_policy(deck_fascist: int, deck_liberal: int) -> tuple[Policy, int, int]:
     """
     Flip the top policy from the deck (chaos).
 
-    Returns (policy, new_deck_bad, new_deck_good).
+    Returns (policy, new_deck_fascist, new_deck_liberal).
     """
-    total = deck_bad + deck_good
+    total = deck_fascist + deck_liberal
     if total == 0:
         raise ValueError("Cannot flip from empty deck")
 
-    # Probability of drawing BAD
-    if random.random() < deck_bad / total:
-        return Policy.BAD, deck_bad - 1, deck_good
+    # Probability of drawing Fascist
+    if random.random() < deck_fascist / total:
+        return Policy.BAD, deck_fascist - 1, deck_liberal
     else:
-        return Policy.GOOD, deck_bad, deck_good - 1
+        return Policy.GOOD, deck_fascist, deck_liberal - 1
 
 
 def generate_game(
@@ -196,27 +193,27 @@ def generate_game(
         seed = random.randint(0, 2**32 - 1)
     random.seed(seed)
 
-    bad_player_ids = random.sample(range(NUM_PLAYERS), NUM_FASCISTS)
-    player_roles = PlayerRoles.create(NUM_PLAYERS, bad_player_ids, None)
+    fascist_player_ids = random.sample(range(NUM_PLAYERS), NUM_FASCISTS)
+    player_roles = PlayerRoles.create(NUM_PLAYERS, fascist_player_ids, None)
     sim = GameSimulation()
     game_state = GameState()
 
     # Track actual deck state
-    actual_deck_bad = BAD_POLICIES
-    actual_deck_good = GOOD_POLICIES
+    actual_deck_fascist = FASCIST_POLICIES
+    actual_deck_liberal = LIBERAL_POLICIES
 
     game_data = {
         "config": {
             "seed": seed,
             "num_players": NUM_PLAYERS,
-            "bad_players": bad_player_ids,
+            "fascist_players": fascist_player_ids,
             "hitler_id": player_roles.hitler_id,
-            "initial_deck": {"bad": BAD_POLICIES, "good": GOOD_POLICIES},
-            "prior_bad_prob": INITIAL_PRIOR_BAD_PROB,
+            "initial_deck": {"fascist": FASCIST_POLICIES, "liberal": LIBERAL_POLICIES},
+            "prior_fascist_prob": INITIAL_PRIOR_FASCIST_PROB,
         },
         "initial_state": {
-            "player_beliefs": {str(i): INITIAL_PRIOR_BAD_PROB for i in range(NUM_PLAYERS)},
-            "deck_expected": {"bad": BAD_POLICIES, "good": GOOD_POLICIES},
+            "player_beliefs": {str(i): INITIAL_PRIOR_FASCIST_PROB for i in range(NUM_PLAYERS)},
+            "deck_expected": {"fascist": FASCIST_POLICIES, "liberal": LIBERAL_POLICIES},
         },
         "rounds": [],
     }
@@ -248,7 +245,7 @@ def generate_game(
             eligible_candidates=eligible_chancellors,
             player_roles=player_roles,
             suspicions=suspicions,
-            bad_policies_enacted=game_state.bad_policies_enacted,
+            fascist_policies_enacted=game_state.fascist_policies_enacted,
         )
 
         # 4. All players vote
@@ -259,7 +256,7 @@ def generate_game(
             player_roles=player_roles,
             suspicions=suspicions,
             election_tracker=game_state.election_tracker.count,
-            bad_policies_enacted=game_state.bad_policies_enacted,
+            fascist_policies_enacted=game_state.fascist_policies_enacted,
         )
 
         vote_passed = votes.passed
@@ -273,14 +270,14 @@ def generate_game(
                 # 5a. Chaos: flip top policy
                 # Reshuffle if needed
                 reshuffled = False
-                if actual_deck_bad + actual_deck_good < 1:
-                    actual_deck_bad = BAD_POLICIES
-                    actual_deck_good = GOOD_POLICIES
-                    sim.reset_deck(BAD_POLICIES, GOOD_POLICIES)
+                if actual_deck_fascist + actual_deck_liberal < 1:
+                    actual_deck_fascist = FASCIST_POLICIES
+                    actual_deck_liberal = LIBERAL_POLICIES
+                    sim.reset_deck(FASCIST_POLICIES, LIBERAL_POLICIES)
                     reshuffled = True
 
-                enacted, actual_deck_bad, actual_deck_good = flip_top_policy(
-                    actual_deck_bad, actual_deck_good
+                enacted, actual_deck_fascist, actual_deck_liberal = flip_top_policy(
+                    actual_deck_fascist, actual_deck_liberal
                 )
 
                 # Enact the policy
@@ -298,13 +295,13 @@ def generate_game(
                     "election_tracker": 0,  # Reset after chaos
                     "enacted": enacted.value,
                     "chaos": True,
-                    "actual_deck": {"bad": actual_deck_bad, "good": actual_deck_good},
+                    "actual_deck": {"fascist": actual_deck_fascist, "liberal": actual_deck_liberal},
                     "reshuffled": reshuffled,
                     "player_beliefs": {str(k): round(v, 4) for k, v in suspicions.items()},
                     "deck_expected": sim.deck_state.get_expected_composition(),
                     "policies_enacted": {
-                        "bad": game_state.bad_policies_enacted,
-                        "good": game_state.good_policies_enacted,
+                        "fascist": game_state.fascist_policies_enacted,
+                        "liberal": game_state.liberal_policies_enacted,
                     },
                 }
             else:
@@ -319,12 +316,12 @@ def generate_game(
                     "election_tracker": game_state.election_tracker.count,
                     "player_beliefs": {str(k): round(v, 4) for k, v in suspicions.items()},
                     "deck_expected": {
-                        "bad": round(sim.deck_state.get_expected_composition()[0], 1),
-                        "good": round(sim.deck_state.get_expected_composition()[1], 1),
+                        "fascist": round(sim.deck_state.get_expected_composition()[0], 1),
+                        "liberal": round(sim.deck_state.get_expected_composition()[1], 1),
                     },
                     "policies_enacted": {
-                        "bad": game_state.bad_policies_enacted,
-                        "good": game_state.good_policies_enacted,
+                        "fascist": game_state.fascist_policies_enacted,
+                        "liberal": game_state.liberal_policies_enacted,
                     },
                 }
         else:
@@ -344,12 +341,12 @@ def generate_game(
                     "win_condition": game_state.win_condition,
                     "player_beliefs": {str(k): round(v, 4) for k, v in suspicions.items()},
                     "deck_expected": {
-                        "bad": round(sim.deck_state.get_expected_composition()[0], 1),
-                        "good": round(sim.deck_state.get_expected_composition()[1], 1),
+                        "fascist": round(sim.deck_state.get_expected_composition()[0], 1),
+                        "liberal": round(sim.deck_state.get_expected_composition()[1], 1),
                     },
                     "policies_enacted": {
-                        "bad": game_state.bad_policies_enacted,
-                        "good": game_state.good_policies_enacted,
+                        "fascist": game_state.fascist_policies_enacted,
+                        "liberal": game_state.liberal_policies_enacted,
                     },
                 }
                 game_data["rounds"].append(round_data)
@@ -360,23 +357,23 @@ def generate_game(
 
             # Reshuffle with fresh deck if fewer than 3 cards remain
             reshuffled = False
-            if actual_deck_bad + actual_deck_good < 3:
-                actual_deck_bad = BAD_POLICIES
-                actual_deck_good = GOOD_POLICIES
-                sim.reset_deck(BAD_POLICIES, GOOD_POLICIES)
+            if actual_deck_fascist + actual_deck_liberal < 3:
+                actual_deck_fascist = FASCIST_POLICIES
+                actual_deck_liberal = LIBERAL_POLICIES
+                sim.reset_deck(FASCIST_POLICIES, LIBERAL_POLICIES)
                 reshuffled = True
 
             # Simulate actual draw
-            draw = simulate_actual_draw(actual_deck_bad, actual_deck_good)
+            draw = simulate_actual_draw(actual_deck_fascist, actual_deck_liberal)
 
             # Determine what actually happens based on true player types
-            president_is_bad = player_roles.is_bad(president_id)
-            chancellor_is_bad = player_roles.is_bad(chancellor_id)
-            enacted = determine_enacted_policy(draw, president_is_bad, chancellor_is_bad)
+            president_is_fascist = player_roles.is_bad(president_id)
+            chancellor_is_fascist = player_roles.is_bad(chancellor_id)
+            enacted = determine_enacted_policy(draw, president_is_fascist, chancellor_is_fascist)
 
             # Update actual deck (all 3 drawn cards are discarded)
-            actual_deck_bad -= draw.bad
-            actual_deck_good -= draw.good
+            actual_deck_fascist -= draw.fascist
+            actual_deck_liberal -= draw.liberal
 
             # Run Bayesian update
             result = sim.play_round(president_id, chancellor_id, enacted)
@@ -390,12 +387,15 @@ def generate_game(
             round_data["votes"] = votes.to_dict()
             round_data["vote_passed"] = True
             round_data["election_tracker"] = game_state.election_tracker.count
-            round_data["actual_draw"] = {"bad": draw.bad, "good": draw.good}
-            round_data["actual_deck"] = {"bad": actual_deck_bad, "good": actual_deck_good}
+            round_data["actual_draw"] = {"fascist": draw.fascist, "liberal": draw.liberal}
+            round_data["actual_deck"] = {
+                "fascist": actual_deck_fascist,
+                "liberal": actual_deck_liberal,
+            }
             round_data["reshuffled"] = reshuffled
             round_data["policies_enacted"] = {
-                "bad": game_state.bad_policies_enacted,
-                "good": game_state.good_policies_enacted,
+                "fascist": game_state.fascist_policies_enacted,
+                "liberal": game_state.liberal_policies_enacted,
             }
 
             if game_state.game_over:
@@ -411,8 +411,8 @@ def generate_game(
         "winner": game_state.winner,
         "win_condition": game_state.win_condition,
         "policies_enacted": {
-            "bad": game_state.bad_policies_enacted,
-            "good": game_state.good_policies_enacted,
+            "fascist": game_state.fascist_policies_enacted,
+            "liberal": game_state.liberal_policies_enacted,
         },
     }
 
@@ -434,9 +434,9 @@ def main():
     print(f"Saved to: {output_path}")
     print()
     print("Summary:")
-    print(f"  Bad players: {game_data['config']['bad_players']}")
+    print(f"  Fascist players: {game_data['config']['fascist_players']}")
     print(f"  Hitler: Player {game_data['config']['hitler_id']}")
-    print(f"  Prior P(bad): {game_data['config']['prior_bad_prob']:.1%}")
+    print(f"  Prior P(Fascist): {game_data['config']['prior_fascist_prob']:.1%}")
     print()
 
     for r in game_data["rounds"]:
@@ -473,9 +473,9 @@ def main():
     print("Final beliefs:")
     final_beliefs = game_data["rounds"][-1]["player_beliefs"]
     for player_id, prob in sorted(final_beliefs.items(), key=lambda x: int(x[0])):
-        is_bad = int(player_id) in game_data["config"]["bad_players"]
+        is_fascist = int(player_id) in game_data["config"]["fascist_players"]
         is_hitler = int(player_id) == game_data["config"]["hitler_id"]
-        marker = " (HITLER)" if is_hitler else (" (FASCIST)" if is_bad else "")
+        marker = " (HITLER)" if is_hitler else (" (FASCIST)" if is_fascist else "")
         print(f"  Player {player_id}: {float(prob):.1%}{marker}")
 
 

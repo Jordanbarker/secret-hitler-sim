@@ -17,9 +17,9 @@ from dataclasses import dataclass, field
 from enum import Enum
 
 from .constants import (
-    BAD_POLICIES,
-    GOOD_POLICIES,
-    INITIAL_PRIOR_BAD_PROB,
+    FASCIST_POLICIES,
+    INITIAL_PRIOR_FASCIST_PROB,
+    LIBERAL_POLICIES,
     NUM_PLAYERS,
 )
 from .core import (
@@ -49,16 +49,18 @@ class DeckState:
     the deck composition becomes uncertain after each round.
     """
 
-    def __init__(self, bad_policies: int = BAD_POLICIES, good_policies: int = GOOD_POLICIES):
+    def __init__(
+        self, fascist_policies: int = FASCIST_POLICIES, liberal_policies: int = LIBERAL_POLICIES
+    ):
         """Initialize with known deck composition."""
-        initial = DeckComposition(bad_policies, good_policies)
+        initial = DeckComposition(fascist_policies, liberal_policies)
         self.distribution: dict[DeckComposition, float] = {initial: 1.0}
 
     def get_expected_composition(self) -> tuple[float, float]:
-        """Return expected (bad, good) counts."""
-        exp_bad = sum(deck.bad * prob for deck, prob in self.distribution.items())
-        exp_good = sum(deck.good * prob for deck, prob in self.distribution.items())
-        return exp_bad, exp_good
+        """Return expected (fascist, liberal) counts."""
+        exp_fascist = sum(deck.fascist * prob for deck, prob in self.distribution.items())
+        exp_liberal = sum(deck.liberal * prob for deck, prob in self.distribution.items())
+        return exp_fascist, exp_liberal
 
     def update(
         self,
@@ -72,7 +74,7 @@ class DeckState:
 
         Args:
             enacted: The policy that was enacted
-            player_beliefs: P(pres_bad, chanc_bad) for each type combination
+            player_beliefs: P(pres_fascist, chanc_fascist) for each type combination
             draw_count: Number of cards drawn by president
             pass_count: Number of cards passed to chancellor
         """
@@ -89,8 +91,11 @@ class DeckState:
 
                 # Sum over player type combinations that produce this outcome
                 outcome_prob = 0.0
-                for (pres_bad, chanc_bad), type_prob in player_beliefs.items():
-                    if enacted_policy_for_types(draw, pres_bad, chanc_bad, pass_count) == enacted:
+                for (pres_fascist, chanc_fascist), type_prob in player_beliefs.items():
+                    if (
+                        enacted_policy_for_types(draw, pres_fascist, chanc_fascist, pass_count)
+                        == enacted
+                    ):
                         outcome_prob += type_prob
 
                 if outcome_prob > 0:
@@ -115,32 +120,32 @@ class DeckState:
         sorted_states = sorted(self.distribution.items(), key=lambda x: x[1], reverse=True)
         return sorted_states[:n]
 
-    def reset(self, bad_policies: int, good_policies: int) -> None:
+    def reset(self, fascist_policies: int, liberal_policies: int) -> None:
         """Reset deck to a fresh state with known composition."""
-        initial = DeckComposition(bad_policies, good_policies)
+        initial = DeckComposition(fascist_policies, liberal_policies)
         self.distribution = {initial: 1.0}
 
 
 class PlayerBeliefs:
-    """Tracks probability estimates for each player being bad."""
+    """Tracks probability estimates for each player being fascist."""
 
     def __init__(
-        self, num_players: int = NUM_PLAYERS, prior_bad_prob: float = INITIAL_PRIOR_BAD_PROB
+        self, num_players: int = NUM_PLAYERS, prior_fascist_prob: float = INITIAL_PRIOR_FASCIST_PROB
     ):
         """
         Initialize player beliefs with uniform priors.
 
         Args:
             num_players: Number of players in the game
-            prior_bad_prob: Prior probability that each player is bad
+            prior_fascist_prob: Prior probability that each player is fascist
         """
-        self.priors: dict[int, float] = {i: prior_bad_prob for i in range(num_players)}
+        self.priors: dict[int, float] = {i: prior_fascist_prob for i in range(num_players)}
 
     def get_joint_probability(
         self, president_id: int, chancellor_id: int
     ) -> dict[tuple[bool, bool], float]:
         """
-        Get joint probability distribution over (president_bad, chancellor_bad).
+        Get joint probability distribution over (president_fascist, chancellor_fascist).
 
         Assumes independence between players.
         """
@@ -186,13 +191,13 @@ class PlayerBeliefs:
                 if draw_prob == 0:
                     continue
 
-                for pres_bad in [False, True]:
-                    for chanc_bad in [False, True]:
+                for pres_fascist in [False, True]:
+                    for chanc_fascist in [False, True]:
                         if (
-                            enacted_policy_for_types(draw, pres_bad, chanc_bad, pass_count)
+                            enacted_policy_for_types(draw, pres_fascist, chanc_fascist, pass_count)
                             == enacted
                         ):
-                            likelihoods[(pres_bad, chanc_bad)] += deck_prob * draw_prob
+                            likelihoods[(pres_fascist, chanc_fascist)] += deck_prob * draw_prob
 
         # Get current joint priors
         joint_prior = self.get_joint_probability(president_id, chancellor_id)
@@ -211,14 +216,14 @@ class PlayerBeliefs:
             joint_posterior = {k: v / total for k, v in joint_posterior.items()}
 
         # Marginalize to get individual posteriors
-        p_pres_bad = joint_posterior[(True, False)] + joint_posterior[(True, True)]
-        p_chanc_bad = joint_posterior[(False, True)] + joint_posterior[(True, True)]
+        p_pres_fascist = joint_posterior[(True, False)] + joint_posterior[(True, True)]
+        p_chanc_fascist = joint_posterior[(False, True)] + joint_posterior[(True, True)]
 
         # Update priors for next round
-        self.priors[president_id] = p_pres_bad
-        self.priors[chancellor_id] = p_chanc_bad
+        self.priors[president_id] = p_pres_fascist
+        self.priors[chancellor_id] = p_chanc_fascist
 
-        return p_pres_bad, p_chanc_bad
+        return p_pres_fascist, p_chanc_fascist
 
 
 @dataclass
@@ -272,8 +277,8 @@ class PlayerRoles:
 class GameState:
     """Tracks game state including policies, elections, and win conditions."""
 
-    bad_policies_enacted: int = 0
-    good_policies_enacted: int = 0
+    fascist_policies_enacted: int = 0
+    liberal_policies_enacted: int = 0
     election_tracker: ElectionTracker = field(default_factory=ElectionTracker)
     term_limits: TermLimits = field(default_factory=TermLimits)
     game_over: bool = False
@@ -292,30 +297,30 @@ class GameState:
         Returns True if game is over.
         """
         if policy == Policy.BAD:
-            self.bad_policies_enacted += 1
+            self.fascist_policies_enacted += 1
         else:
-            self.good_policies_enacted += 1
+            self.liberal_policies_enacted += 1
 
         # Check policy win conditions
-        if self.good_policies_enacted >= 5:
+        if self.liberal_policies_enacted >= 5:
             self.game_over = True
             self.winner = "LIBERAL"
-            self.win_condition = "5 GOOD policies enacted"
+            self.win_condition = "5 Liberal policies enacted"
             return True
-        if self.bad_policies_enacted >= 6:
+        if self.fascist_policies_enacted >= 6:
             self.game_over = True
             self.winner = "FASCIST"
-            self.win_condition = "6 BAD policies enacted"
+            self.win_condition = "6 Fascist policies enacted"
             return True
 
         return False
 
     def check_hitler_chancellor_win(self, chancellor_id: int, player_roles: PlayerRoles) -> bool:
         """Check if Hitler being elected chancellor triggers fascist win."""
-        if self.bad_policies_enacted >= 3 and player_roles.is_hitler(chancellor_id):
+        if self.fascist_policies_enacted >= 3 and player_roles.is_hitler(chancellor_id):
             self.game_over = True
             self.winner = "FASCIST"
-            self.win_condition = "Hitler elected Chancellor after 3+ BAD policies"
+            self.win_condition = "Hitler elected Chancellor after 3+ Fascist policies"
             return True
         return False
 
@@ -385,8 +390,8 @@ class RoundResult:
     president_id: int
     chancellor_id: int
     enacted: Policy | None  # None for failed elections
-    president_prob_bad: float
-    chancellor_prob_bad: float
+    president_prob_fascist: float
+    chancellor_prob_fascist: float
     president_prob_before: float
     chancellor_prob_before: float
     top_deck_states: list[tuple[DeckComposition, float]]
@@ -409,8 +414,8 @@ class RoundResult:
             "election_tracker": self.election_tracker,
             "player_beliefs": {str(k): round(v, 4) for k, v in self.all_player_beliefs.items()},
             "deck_expected": {
-                "bad": round(self.deck_expected[0], 1),
-                "good": round(self.deck_expected[1], 1),
+                "fascist": round(self.deck_expected[0], 1),
+                "liberal": round(self.deck_expected[1], 1),
             },
         }
         if self.enacted is not None:
@@ -427,26 +432,26 @@ class GameSimulation:
 
     def __init__(
         self,
-        bad_policies: int = BAD_POLICIES,
-        good_policies: int = GOOD_POLICIES,
+        fascist_policies: int = FASCIST_POLICIES,
+        liberal_policies: int = LIBERAL_POLICIES,
         draw_count: int = 3,
         pass_count: int = 2,
         num_players: int = NUM_PLAYERS,
-        prior_bad_prob: float = INITIAL_PRIOR_BAD_PROB,
+        prior_fascist_prob: float = INITIAL_PRIOR_FASCIST_PROB,
     ):
         """
         Initialize the game simulation.
 
         Args:
-            bad_policies: Number of bad policies in initial deck
-            good_policies: Number of good policies in initial deck
+            fascist_policies: Number of fascist policies in initial deck
+            liberal_policies: Number of liberal policies in initial deck
             draw_count: Number of policies president draws
             pass_count: Number of policies passed to chancellor
             num_players: Number of players in the game
-            prior_bad_prob: Prior probability each player is bad
+            prior_fascist_prob: Prior probability each player is fascist
         """
-        self.deck_state = DeckState(bad_policies, good_policies)
-        self.player_beliefs = PlayerBeliefs(num_players, prior_bad_prob)
+        self.deck_state = DeckState(fascist_policies, liberal_policies)
+        self.player_beliefs = PlayerBeliefs(num_players, prior_fascist_prob)
         self.draw_count = draw_count
         self.pass_count = pass_count
         self.round_num = 0
@@ -494,8 +499,8 @@ class GameSimulation:
             president_id=president_id,
             chancellor_id=chancellor_id,
             enacted=enacted,
-            president_prob_bad=pres_prob,
-            chancellor_prob_bad=chanc_prob,
+            president_prob_fascist=pres_prob,
+            chancellor_prob_fascist=chanc_prob,
             president_prob_before=pres_before,
             chancellor_prob_before=chanc_before,
             top_deck_states=self.deck_state.top_states(5),
@@ -506,9 +511,9 @@ class GameSimulation:
         self.history.append(result)
         return result
 
-    def reset_deck(self, bad_policies: int, good_policies: int) -> None:
+    def reset_deck(self, fascist_policies: int, liberal_policies: int) -> None:
         """Reset the deck state to a fresh deck (e.g., after reshuffle)."""
-        self.deck_state.reset(bad_policies, good_policies)
+        self.deck_state.reset(fascist_policies, liberal_policies)
 
     def print_round(self, result: RoundResult) -> None:
         """Print a formatted summary of a round."""
@@ -520,20 +525,20 @@ class GameSimulation:
         print(f"Enacted Policy: {result.enacted.value}")
         print()
 
-        print("Player Beliefs (P(bad)):")
+        print("Player Beliefs (P(Fascist)):")
         print(
             f"  Player {result.president_id} (President): "
-            f"{result.president_prob_bad:.1%} (was {result.president_prob_before:.1%})"
+            f"{result.president_prob_fascist:.1%} (was {result.president_prob_before:.1%})"
         )
         print(
             f"  Player {result.chancellor_id} (Chancellor): "
-            f"{result.chancellor_prob_bad:.1%} (was {result.chancellor_prob_before:.1%})"
+            f"{result.chancellor_prob_fascist:.1%} (was {result.chancellor_prob_before:.1%})"
         )
         print()
 
-        print("Top Deck States (bad, good):")
+        print("Top Deck States (fascist, liberal):")
         for deck, prob in result.top_deck_states:
-            print(f"  ({deck.bad:2d} bad, {deck.good:2d} good): {prob:.1%}")
+            print(f"  ({deck.fascist:2d} fascist, {deck.liberal:2d} liberal): {prob:.1%}")
 
     def get_all_player_beliefs(self) -> dict[int, float]:
         """Get current beliefs for all players."""
@@ -547,23 +552,23 @@ def main():
     print("=" * 60)
     print()
     print("Configuration:")
-    print(f"  Initial Deck: {BAD_POLICIES} bad, {GOOD_POLICIES} good policies")
+    print(f"  Initial Deck: {FASCIST_POLICIES} fascist, {LIBERAL_POLICIES} liberal policies")
     print("  Draw Count: 3")
     print("  Pass Count: 2")
     print(f"  Players: {NUM_PLAYERS} (IDs: 0-{NUM_PLAYERS - 1})")
-    print("  Prior P(bad): 50%")
+    print("  Prior P(Fascist): 50%")
     print()
     print("Behavioral Assumptions (Optimal Play):")
-    print("  - Good players always try to enact good policies")
-    print("  - Bad players always try to enact bad policies")
+    print("  - Liberal players always try to enact liberal policies")
+    print("  - Fascist players always try to enact fascist policies")
 
     sim = GameSimulation()
 
     # Simulate a few rounds with different outcomes
     scenarios = [
-        (0, 1, Policy.BAD, "A bad policy is enacted"),
-        (1, 0, Policy.BAD, "Another bad policy is enacted"),
-        (0, 1, Policy.GOOD, "Finally a good policy!"),
+        (0, 1, Policy.BAD, "A fascist policy is enacted"),
+        (1, 0, Policy.BAD, "Another fascist policy is enacted"),
+        (0, 1, Policy.GOOD, "Finally a liberal policy!"),
     ]
 
     for pres, chanc, policy, description in scenarios:
@@ -576,10 +581,10 @@ def main():
     print("=" * 60)
     print("\nFinal Player Beliefs:")
     for player_id, prob in sim.get_all_player_beliefs().items():
-        print(f"  Player {player_id}: {prob:.1%} chance of being bad")
+        print(f"  Player {player_id}: {prob:.1%} chance of being fascist")
 
-    exp_bad, exp_good = sim.deck_state.get_expected_composition()
-    print(f"\nExpected Deck: {exp_bad:.1f} bad, {exp_good:.1f} good policies remaining")
+    exp_fascist, exp_liberal = sim.deck_state.get_expected_composition()
+    print(f"\nExpected Deck: {exp_fascist:.1f} fascist, {exp_liberal:.1f} liberal remaining")
 
 
 if __name__ == "__main__":
