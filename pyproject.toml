@@ -3,7 +3,9 @@ name = "policy-game-simulation"
 version = "0.1.0"
 description = "Bayesian inference simulation for policy-based social deduction game"
 requires-python = ">=3.10"
-dependencies = []
+dependencies = [
+    "playwright>=1.57.0",
+]
 
 [project.optional-dependencies]
 dev = ["pytest>=8.0", "ruff>=0.14.13"]
