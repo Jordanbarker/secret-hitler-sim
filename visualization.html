@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Policy Game - Bayesian Visualization</title>
+    <title>Secret Hitler Simulation</title>
     <style>
         :root {
             /* Semantic: Fascist (Red) */
@@ -403,8 +403,15 @@
         .player-5 .player-vote { right: calc(100%); top: 50%; transform: translateY(-50%); }
 
         /* Control panel */
-        .controls {
+        .controls-wrapper {
             margin-top: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .controls {
             display: flex;
             gap: 15px;
             align-items: center;
@@ -547,6 +554,7 @@
             border-radius: 8px;
             /* Embossed effect */
             text-shadow: 0 1px 0 rgba(255,255,255,0.2), 0 -1px 0 rgba(0,0,0,0.4);
+            z-index: 11; /* Above win-message overlay (z-index: 10) */
         }
 
         .policy-board.liberal .policy-board-title {
@@ -585,26 +593,28 @@
         }
 
         .win-message {
-            margin-top: 15px;
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            border-radius: 14px;
+            background: rgba(0, 0, 0, 0.7);
+            z-index: 10;
             padding: 12px 24px;
-            border-radius: 8px;
             font-weight: 700;
             font-size: 1.1rem;
             text-transform: uppercase;
             letter-spacing: 2px;
-            display: none;
-        }
-
-        .win-message.liberal-win {
-            display: block;
-            background: var(--color-liberal-dark);
             color: white;
         }
 
+        .win-message.liberal-win,
         .win-message.fascist-win {
-            display: block;
-            background: var(--color-fascist-dark);
-            color: white;
+            display: flex;
         }
 
         /* Cards */
@@ -687,34 +697,18 @@
                 margin-bottom: -200px; /* Compensate for scaled empty space */
             }
 
+            .controls-wrapper {
+                max-width: 360px;
+            }
+
             .controls {
                 flex-wrap: wrap;
                 justify-content: center;
                 gap: 8px;
-                max-width: 360px;
             }
 
-            /* Row 1: Prev, Counter, Next */
-            .controls .btn-prev {
-                order: 2;
-            }
-
-            .controls .round-counter {
-                order: 3;
-            }
-
-            .controls .btn-next {
-                order: 4;
-            }
-
-            /* Row 2: Seed input, New Game */
             .controls #seed-input {
-                order: 5;
                 width: 120px;
-            }
-
-            .controls .btn-new-game {
-                order: 6;
             }
 
             button {
@@ -748,11 +742,6 @@
                 width: 36px;
                 height: 48px;
             }
-
-            .win-message {
-                font-size: 1rem;
-                padding: 10px 18px;
-            }
         }
 
         /* Extra small: tighter scaling for 375px */
@@ -762,7 +751,7 @@
                 margin-bottom: -220px;
             }
 
-            .controls {
+            .controls-wrapper {
                 max-width: 340px;
             }
 
@@ -929,6 +918,7 @@
             <div class="policy-slot" id="liberal-slot-2"></div>
             <div class="policy-slot" id="liberal-slot-3"></div>
             <div class="policy-slot" id="liberal-slot-4"></div>
+            <div class="win-message" id="liberal-win-message"></div>
         </div>
         <div class="policy-board fascist" id="fascist-board">
             <div class="policy-board-title">Fascist</div>
@@ -938,16 +928,20 @@
             <div class="policy-slot" id="fascist-slot-3"></div>
             <div class="policy-slot" id="fascist-slot-4"></div>
             <div class="policy-slot" id="fascist-slot-5"></div>
+            <div class="win-message" id="fascist-win-message"></div>
         </div>
     </div>
-    <div class="win-message" id="win-message"></div>
 
-    <div class="controls">
-        <button class="btn-prev" id="btn-prev" onclick="prevRound()" disabled>← Previous Round</button>
-        <span class="round-counter" id="round-counter">Round 0 of 5</span>
-        <button class="btn-next" id="btn-next" onclick="nextRound()">Next Round →</button>
-        <input type="text" id="seed-input" placeholder="Seed (optional)" style="padding: 10px 12px; font-size: 0.9rem; border: none; border-radius: 8px; background: var(--color-surface); color: var(--color-text); width: 130px;">
-        <button class="btn-new-game" id="btn-new-game" onclick="generateNewGame()" style="background: linear-gradient(145deg, #8b5cf6 0%, #7c3aed 100%); color: white; box-shadow: 0 4px 15px rgba(139, 92, 246, 0.4);">New Game</button>
+    <div class="controls-wrapper">
+        <div class="controls">
+            <span class="round-counter" id="round-counter">Round 0 of 5</span>
+            <button class="btn-prev" id="btn-prev" onclick="prevRound()" disabled>Previous</button>
+            <button class="btn-next" id="btn-next" onclick="nextRound()">Next Round</button>
+        </div>
+        <div class="controls game-controls">
+            <input type="text" id="seed-input" placeholder="Seed (optional)" style="padding: 10px 12px; font-size: 0.9rem; border: none; border-radius: 8px; background: var(--color-surface); color: var(--color-text); width: 130px;">
+            <button class="btn-new-game" id="btn-new-game" onclick="generateNewGame()" style="background: linear-gradient(145deg, #8b5cf6 0%, #7c3aed 100%); color: white; box-shadow: 0 4px 15px rgba(139, 92, 246, 0.4);">New Game</button>
+        </div>
     </div>
 
     <div class="info-panel">
@@ -1223,18 +1217,26 @@
             // Update board winner styling
             const liberalBoard = document.getElementById('liberal-board');
             const fascistBoard = document.getElementById('fascist-board');
-            liberalBoard.classList.toggle('winner', liberalCount >= 5 || winner === 'LIBERAL');
-            fascistBoard.classList.toggle('winner', fascistCount >= 6 || winner === 'FASCIST');
+            const liberalWin = liberalCount >= 5 || winner === 'LIBERAL';
+            const fascistWin = fascistCount >= 6 || winner === 'FASCIST';
+            liberalBoard.classList.toggle('winner', liberalWin);
+            fascistBoard.classList.toggle('winner', fascistWin);
 
-            // Update win message
-            const winMessage = document.getElementById('win-message');
-            winMessage.className = 'win-message';
-            if (liberalCount >= 5 || winner === 'LIBERAL') {
-                winMessage.textContent = 'Liberals Win!';
-                winMessage.classList.add('liberal-win');
-            } else if (fascistCount >= 6 || winner === 'FASCIST') {
-                winMessage.textContent = 'Fascists Win!';
-                winMessage.classList.add('fascist-win');
+            // Update win messages (now inside each board)
+            const liberalWinMessage = document.getElementById('liberal-win-message');
+            const fascistWinMessage = document.getElementById('fascist-win-message');
+
+            // Reset both
+            liberalWinMessage.className = 'win-message';
+            fascistWinMessage.className = 'win-message';
+
+            if (liberalWin) {
+                liberalWinMessage.textContent = 'Liberals Win!';
+                liberalWinMessage.classList.add('liberal-win');
+            }
+            if (fascistWin) {
+                fascistWinMessage.textContent = 'Fascists Win!';
+                fascistWinMessage.classList.add('fascist-win');
             }
         }
 
