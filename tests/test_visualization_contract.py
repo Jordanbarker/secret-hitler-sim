@@ -2,7 +2,7 @@
 Tests for visualization interface contract.
 
 These tests ensure the Python backend generates data in the exact format
-that visualization.html expects. Any changes that break these tests will
+that index.html expects. Any changes that break these tests will
 likely break the frontend visualization.
 """
 
@@ -41,7 +41,7 @@ class TestSchemaValidation:
 
 
 class TestEnumValues:
-    """Verify enum values are exactly what visualization.html expects."""
+    """Verify enum values are exactly what index.html expects."""
 
     def test_enum_values_match_visualization(self):
         """Verify enum values use exact strings expected by CSS/JS."""

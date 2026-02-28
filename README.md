@@ -1,6 +1,6 @@
 # Policy Game Bayesian Simulation
 
-A simulation for social deduction games where players draw policies and we use Bayesian inference to estimate the probability that each player is "bad" or "good" based on observed policy outcomes. 
+A simulation for social deduction games where players draw policies and we use Bayesian inference to estimate the probability that each player is facist. 
 
 ## Game Mechanics
 
@@ -9,46 +9,14 @@ A simulation for social deduction games where players draw policies and we use B
 - **Chancellor** discards 1, enacts the remaining policy
 - All drawn policies are removed from the deck
 
-## Installation
+## Game Logic Overview
 
-```bash
-uv sync --dev
-```
+`generate_game()` in `generator.py` is the entry point. It assigns roles (`PlayerRoles`), initializes Bayesian tracking (`GameSimulation`) and game state (`GameState`), then runs a main loop where each round:
 
-## Usage
-
-### Run the demo simulation
-
-```bash
-python -m policy_game.simulation
-```
-
-### Generate a game for visualization
-
-```bash
-python -m policy_game.generator
-```
-
-This creates `data/game_data.json` which can be viewed with `data/visualization.html`.
-
-### Use as a library
-
-```python
-from policy_game import GameSimulation, Policy
-
-sim = GameSimulation(
-    bad_policies=11,
-    good_policies=6,
-    num_players=6,
-    prior_bad_prob=1/3,  # 2 bad players out of 6
-)
-
-# Play a round
-result = sim.play_round(president_id=0, chancellor_id=1, enacted=Policy.BAD)
-
-# Check updated beliefs
-print(sim.get_all_player_beliefs())
-```
+1. **President rotates** and nominates a chancellor from eligible players (term-limited)
+2. **All players vote** using role-specific strategies (liberal, fascist, hitler)
+3. **If vote fails** — election tracker increments; 3 failures triggers chaos (top policy enacted)
+4. **If vote passes** — president draws 3, discards 1; chancellor picks 1 of 2 to enact; Bayesian beliefs update
 
 ## Project Structure
 
@@ -56,20 +24,18 @@ print(sim.get_all_player_beliefs())
 game-sim/
 ├── src/policy_game/
 │   ├── __init__.py      # Package exports
+│   ├── constants.py     # Game constants (deck size, player count, etc.)
 │   ├── core.py          # Policy, Draw, DeckComposition, strategy functions
 │   ├── simulation.py    # DeckState, PlayerBeliefs, GameSimulation
 │   └── generator.py     # Game generation for visualization
 ├── tests/
-│   ├── test_core.py     # Tests for core models and strategies
-│   └── test_simulation.py
+│   ├── test_core.py
+│   ├── test_simulation.py
+│   └── test_visualization_contract.py
+├── scripts/
+│   └── verify_visualization.py
 ├── data/
-│   ├── game_data.json   # Generated game data
-│   └── visualization.html
+│   └── game_data.json   # Generated game data
+├── index.html           # Interactive game visualization
 └── pyproject.toml
-```
-
-## Running Tests
-
-```bash
-uv run pytest
 ```

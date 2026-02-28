@@ -42,3 +42,6 @@ uv.lock
 # Generated data (keep .gitkeep)
 data/*.json
 screenshots/*
+
+# Experimental HTML layouts
+html/
