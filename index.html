@@ -765,6 +765,15 @@
             transition: top 0.3s ease, left 0.3s ease;
         }
 
+        .tutorial-tooltip.welcome {
+            max-width: 500px;
+            padding: 32px 36px;
+        }
+
+        .tutorial-tooltip.welcome .tutorial-text {
+            font-size: 1.1rem;
+        }
+
         .tutorial-step-indicator {
             font-size: 0.75rem;
             color: #64748b;
@@ -1604,6 +1613,8 @@ if '/' not in sys.path:
             const textEl = document.getElementById('tutorial-text');
             const nextBtn = document.getElementById('tutorial-btn-next');
 
+            tooltip.classList.toggle('welcome', tutorialStep === 0);
+
             // Step indicator
             stepIndicator.textContent = `Step ${tutorialStep + 1} of ${TUTORIAL_STEPS.length}`;
 
@@ -1620,7 +1631,7 @@ if '/' not in sys.path:
             }
 
             const skipBtn = tooltip.querySelector('.tutorial-btn-skip');
-            skipBtn.style.display = (tutorialStep === TUTORIAL_STEPS.length - 1) ? 'none' : '';
+            skipBtn.style.display = (tutorialStep === TUTORIAL_STEPS.length - 1 || !step.button) ? 'none' : '';
 
             // Remove previous highlight
             document.querySelectorAll('.tutorial-highlighted').forEach(el => {
