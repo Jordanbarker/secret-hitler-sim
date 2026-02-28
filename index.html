@@ -68,16 +68,22 @@
             padding: 15px;
         }
 
-        /* Game info panel - compact horizontal display */
+        /* Game info panel - vertical layout */
         .game-info {
             background: var(--color-panel);
             border-radius: 12px;
             padding: 12px 20px;
             display: flex;
-            gap: 20px;
+            flex-direction: column;
+            gap: 12px;
             align-items: center;
             margin-bottom: 15px;
-            flex-wrap: wrap;
+        }
+
+        .round-result {
+            display: flex;
+            gap: 12px;
+            align-items: center;
             justify-content: center;
         }
 
@@ -705,9 +711,6 @@
         }
 
         @media (max-width: 400px) {
-            .player-grid {
-                grid-template-columns: 1fr;
-            }
 
             .player-card {
                 grid-template-columns: auto 1fr auto;
@@ -863,8 +866,10 @@
                 <span class="deck-est">(<span id="deck-liberal-est">~6</span>)</span>
             </div>
         </div>
-        <div class="policy-enacted hidden" id="policy-enacted"> — </div>
-        <div id="executive-action"></div>
+        <div class="round-result">
+            <div class="policy-enacted hidden" id="policy-enacted"> — </div>
+            <div id="executive-action"></div>
+        </div>
         <div class="policy-history" id="policy-history"></div>
     </div>
 
@@ -1100,8 +1105,8 @@
             if (actualDeck) {
                 document.getElementById('deck-fascist').textContent = actualDeck.fascist;
                 document.getElementById('deck-liberal').textContent = actualDeck.liberal;
-                document.getElementById('deck-fascist-est').textContent = `~${deckExpected.fascist.toFixed(0)}`;
-                document.getElementById('deck-liberal-est').textContent = `~${deckExpected.liberal.toFixed(0)}`;
+                document.getElementById('deck-fascist-est').textContent = `~${deckExpected.fascist.toFixed(1)}`;
+                document.getElementById('deck-liberal-est').textContent = `~${deckExpected.liberal.toFixed(1)}`;
             } else {
                 document.getElementById('deck-fascist').textContent = '—';
                 document.getElementById('deck-liberal').textContent = '—';
@@ -1547,31 +1552,63 @@ if '/' not in sys.path:
             {
                 target: null,
                 position: 'center',
-                text: '<strong>Welcome!</strong><br><br>This visualization simulates playing Secret Hitler to give an outside view of the bayesian probabilities that each player is facist.',
+                text: '<strong>Welcome!</strong><br><br>This visualization simulates games of Secret Hitler and tracks the Bayesian probability that each player is fascist.',
                 button: 'Next'
             },
             {
                 target: '.deck-info',
                 position: 'below',
-                text: '<strong>Deck Counts</strong><br><br>The numbers like <strong>11 (~11)</strong> mean: 11 actual fascist cards, with the Bayesian estimate of ~11 in parentheses. The estimate diverges from reality as hidden information accumulates.',
+                text: '<strong>Deck Counts</strong><br><br>The numbers like <strong>11 (~11.0)</strong> mean: 11 actual fascist cards, with the Bayesian estimate of ~11 in parentheses. The estimates are formed by updating our beliefs based on what policy was enacted.',
                 button: 'Next'
             },
             {
                 target: '.player-grid',
                 position: 'below',
-                text: '<strong>Player Cards</strong><br><br>Each player shows their estimated probability of being fascist. Everyone starts at 33.3% to show the prior from 2 fascists among 6 players.',
+                text: '<strong>Player Cards</strong><br><br>Each player has an estimated probability of being fascist. Everyone starts at 33.3% because there are 2 fascists among 6 players.',
                 button: 'Next'
             },
             {
                 target: null,
                 position: 'center',
                 text: 'Advancing to Round 1...',
-                button: null // auto-advance
+                button: null,
+                onAutoAdvance() { currentRound = 0; updateDisplay(); }
             },
             {
                 target: '.player-grid',
                 position: 'below',
-                text: '', // filled dynamically
+                dynamicText: computeRound1Text,
+                button: 'Next'
+            },
+            {
+                target: null,
+                position: 'center',
+                text: '<strong>How Bayesian Updates Work</strong><br><br>The model considers every possible draw combination from the estimated deck. For each possible draw it asks: "How likely is each player role combination to produce this result?" Then Bayes\' rule updates beliefs — roles that better explain the outcome become more probable.',
+                button: 'Next'
+            },
+            {
+                target: '.player-grid',
+                position: 'below',
+                text: '<strong>Policy Cards</strong><br><br>The small cards on the president show the 3 drawn (&#x2716; = discarded). The chancellor\'s cards show the 2 received (highlighted = enacted).<br><br>The model assumes liberals play optimally — they discard fascist policies and enact liberal ones. Fascists do the opposite.',
+                button: 'Next'
+            },
+            {
+                target: '.deck-info',
+                position: 'below',
+                dynamicText: computeDeckText,
+                button: 'Next'
+            },
+            {
+                target: null,
+                position: 'center',
+                text: 'Advancing to Round 2...',
+                button: null,
+                onAutoAdvance() { currentRound = 1; updateDisplay(); }
+            },
+            {
+                target: '.player-grid',
+                position: 'below',
+                dynamicText: computeRound2Text,
                 button: 'Next'
             },
             {
@@ -1597,6 +1634,42 @@ if '/' not in sys.path:
             return text;
         }
 
+        function computeDeckText() {
+            if (!gameData || !gameData.rounds || currentRound < 0) {
+                return 'Deck data is not available.';
+            }
+            const r = gameData.rounds[currentRound];
+            const actual = r.actual_deck || {};
+            const estimated = r.deck_expected || {};
+            const aF = actual.fascist ?? '?';
+            const aL = actual.liberal ?? '?';
+            const eF = estimated.fascist != null ? Number(estimated.fascist).toFixed(1) : '?';
+            const eL = estimated.liberal != null ? Number(estimated.liberal).toFixed(1) : '?';
+
+            let text = `<strong>Deck Uncertainty</strong><br><br>`;
+            text += `After policies are enacted, we don't know exactly which cards were discarded — only what was enacted. `;
+            text += `So the estimated deck composition diverges from the actual one.<br><br>`;
+            text += `Right now the deck has <strong>${aF}F / ${aL}L</strong> actual cards, `;
+            text += `but the model estimates <strong>~${eF}F / ~${eL}L</strong>.<br><br>`;
+            text += `The model uses this estimate when computing how likely each policy outcome is.`;
+            return text;
+        }
+
+        function computeRound2Text() {
+            if (!gameData || !gameData.rounds || gameData.rounds.length < 2) {
+                return 'Round 2 data is not available.';
+            }
+            const r = gameData.rounds[1];
+            const pres = `Player ${r.president_id}`;
+            const chanc = `Player ${r.chancellor_id}`;
+            const policy = r.enacted === 'BAD' ? 'Fascist' : 'Liberal';
+
+            let text = `<strong>Round 2 — Compounding Beliefs</strong><br><br>`;
+            text += `<strong>${pres}</strong> (president) and <strong>${chanc}</strong> (chancellor) enacted a <strong>${policy}</strong> policy.`;
+            text += `<br><br>Each round's update builds on the last — beliefs compound across rounds. A player involved in multiple suspicious governments will see their probability climb rapidly.`;
+            return text;
+        }
+
         function startTutorial() {
             tutorialActive = true;
             tutorialStep = 0;
@@ -1618,8 +1691,7 @@ if '/' not in sys.path:
             // Step indicator
             stepIndicator.textContent = `Step ${tutorialStep + 1} of ${TUTORIAL_STEPS.length}`;
 
-            // Dynamic text for step 6
-            const displayText = tutorialStep === 4 ? computeRound1Text() : step.text;
+            const displayText = step.dynamicText ? step.dynamicText() : step.text;
             textEl.innerHTML = displayText;
 
             // Button
@@ -1639,6 +1711,7 @@ if '/' not in sys.path:
             });
 
             if (step.target) {
+                overlay.style.background = '';
                 const targetEl = document.querySelector(step.target);
                 if (targetEl) {
                     targetEl.classList.add('tutorial-highlighted');
@@ -1672,6 +1745,7 @@ if '/' not in sys.path:
                 }
             } else {
                 spotlight.classList.add('hidden');
+                overlay.style.background = 'rgba(0, 0, 0, 0.75)';
                 // Center tooltip
                 tooltip.style.display = '';
                 const tooltipRect = tooltip.getBoundingClientRect();
@@ -1679,11 +1753,9 @@ if '/' not in sys.path:
                 tooltip.style.left = (window.innerWidth / 2 - tooltipRect.width / 2) + 'px';
             }
 
-            // Auto-advance for step 5
             if (step.button === null) {
                 tutorialAutoTimer = setTimeout(() => {
-                    currentRound = 0;
-                    updateDisplay();
+                    if (step.onAutoAdvance) step.onAutoAdvance();
                     tutorialNext();
                 }, 1200);
             }
