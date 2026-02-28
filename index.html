@@ -676,25 +676,46 @@
 
         @media (max-width: 600px) {
             body {
-                padding: 10px;
+                padding: 8px;
+                height: 100dvh;
+                max-height: 100dvh;
+                min-height: auto;
+                overflow: hidden;
+                justify-content: space-between;
+            }
+
+            .game-info {
+                padding: 6px 12px;
+                gap: 6px;
+                margin-bottom: 0;
             }
 
             .player-grid {
                 grid-template-columns: repeat(2, 1fr);
+                gap: 6px;
+                margin-bottom: 0;
+                flex-shrink: 1;
+                min-height: 0;
             }
 
-            .game-info {
-                padding: 10px 15px;
-                gap: 12px;
+            .player-card {
+                padding: 8px;
+                gap: 4px;
             }
 
             .policy-boards {
-                gap: 10px;
+                gap: 8px;
+                margin-top: 0;
+                margin-bottom: 0;
+            }
+
+            .policy-board {
+                padding: 8px 12px;
             }
 
             .policy-slot {
-                width: 28px;
-                height: 38px;
+                width: 24px;
+                height: 32px;
             }
 
             .policy-card {
@@ -702,11 +723,20 @@
                 height: 12px;
             }
 
+            .controls-wrapper {
+                gap: 6px;
+            }
+
             button {
-                padding: 12px 24px;
-                font-size: 1rem;
-                min-height: 52px;
-                min-width: 52px;
+                padding: 8px 16px;
+                font-size: 0.85rem;
+                min-height: 40px;
+                min-width: 40px;
+            }
+
+            .seed-display {
+                margin-top: 0;
+                font-size: 0.7rem;
             }
         }
 
