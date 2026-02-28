@@ -20,23 +20,27 @@ from .constants import (
 )
 from .core import (
     Draw,
+    ExecutivePower,
     Policy,
     Role,
     TermLimits,
     VoteRecord,
     chancellor_enacts,
+    choose_execution_target,
     fascist_voting_strategy,
     hitler_voting_strategy,
     liberal_voting_strategy,
     president_passes,
+    should_accept_veto,
+    should_propose_veto,
 )
 from .simulation import GameSimulation, GameState, PlayerRoles, RoundType
 
 
 def simulate_actual_draw(deck_fascist: int, deck_liberal: int, draw_count: int = 3) -> Draw:
     """
-    Simulate an actual draw from the deck.
-    Returns what cards were actually drawn.
+    Simulate a draw from the deck.
+    Returns what cards were drawn.
     """
     deck = ["BAD"] * deck_fascist + ["GOOD"] * deck_liberal
     drawn = random.sample(deck, min(draw_count, len(deck)))
@@ -47,7 +51,7 @@ def determine_enacted_policy(
     draw: Draw, president_is_fascist: bool, chancellor_is_fascist: bool, pass_count: int = 2
 ) -> Policy:
     """
-    Given actual draw and true player types, determine what gets enacted.
+    Given draw and player types (Facist/Liberal), determine what gets enacted.
     """
     passed = president_passes(draw, president_is_fascist, pass_count)
     return chancellor_enacts(passed, chancellor_is_fascist)
@@ -61,18 +65,23 @@ def conduct_vote(
     suspicions: dict[int, float],
     election_tracker: int,
     fascist_policies_enacted: int,
+    executed_players: set[int] | None = None,
 ) -> VoteRecord:
     """
     Conduct a vote on a chancellor nomination.
 
-    All players vote using their role-appropriate strategy.
+    All alive players vote using their role-appropriate strategy.
     """
     votes = VoteRecord()
+    executed = executed_players or set()
 
     # Build is_fascist dict for fascist strategy
-    is_fascist = {pid: player_roles.is_bad(pid) for pid in range(num_players)}
+    is_fascist = {pid: player_roles.is_facist_or_hitler(pid) for pid in range(num_players)}
 
     for voter_id in range(num_players):
+        if voter_id in executed:
+            continue
+
         role = player_roles.get_role(voter_id)
 
         if role == Role.LIBERAL:
@@ -97,7 +106,6 @@ def conduct_vote(
                 president_id=president_id,
                 chancellor_id=chancellor_id,
                 suspicions=suspicions,
-                is_fascist=is_fascist,
                 election_tracker=election_tracker,
                 bad_policies_enacted=fascist_policies_enacted,
             )
@@ -111,14 +119,19 @@ def get_eligible_chancellors(
     num_players: int,
     president_id: int,
     term_limits: TermLimits,
+    executed_players: set[int] | None = None,
 ) -> list[int]:
     """Get list of players eligible to be nominated as chancellor."""
+    executed = executed_players or set()
     eligible = []
     for player_id in range(num_players):
         if player_id == president_id:
             continue
+        if player_id in executed:
+            continue
         if term_limits.is_eligible(player_id, num_players):
             eligible.append(player_id)
+    assert eligible, "No eligible chancellor candidates"
     return eligible
 
 
@@ -148,7 +161,7 @@ def choose_chancellor_nomination(
             return player_roles.hitler_id
         # Otherwise prefer fellow fascists
         for candidate in eligible_candidates:
-            if player_roles.is_bad(candidate):
+            if player_roles.is_facist_or_hitler(candidate):
                 return candidate
         # Fall back to random
         return random.choice(eligible_candidates)
@@ -176,11 +189,12 @@ def flip_top_policy(deck_fascist: int, deck_liberal: int) -> tuple[Policy, int, 
 
 
 def generate_game(
-    num_rounds: int = 20,
+    num_rounds: int = 30,
     seed: int | None = None,
 ) -> dict:
     """
-    Generate a complete game with voting, election tracker, and policy outcomes.
+    Generate a complete game with voting, election tracker, policy outcomes,
+    executive actions, and veto power.
 
     Args:
         num_rounds: Maximum rounds to play
@@ -197,8 +211,6 @@ def generate_game(
     player_roles = PlayerRoles.create(NUM_PLAYERS, fascist_player_ids, None)
     sim = GameSimulation()
     game_state = GameState()
-
-    # Track actual deck state
     actual_deck_fascist = FASCIST_POLICIES
     actual_deck_liberal = LIBERAL_POLICIES
 
@@ -224,17 +236,18 @@ def generate_game(
     while round_num < num_rounds and not game_state.game_over:
         round_num += 1
 
-        # 1. Rotate president
+        # 1. Rotate president (skip executed players)
         president_id = (president_id + 1) % NUM_PLAYERS
+        while not game_state.is_alive(president_id):
+            president_id = (president_id + 1) % NUM_PLAYERS
 
-        # 2. Get eligible chancellor candidates (apply term limits)
+        # 2. Get eligible chancellor candidates (apply term limits, exclude executed)
         eligible_chancellors = get_eligible_chancellors(
-            NUM_PLAYERS, president_id, game_state.term_limits
+            NUM_PLAYERS,
+            president_id,
+            game_state.term_limits,
+            executed_players=game_state.executed_players,
         )
-
-        if not eligible_chancellors:
-            # Should not happen in normal play, but handle gracefully
-            continue
 
         # Get current suspicions from Bayesian beliefs
         suspicions = dict(sim.player_beliefs.priors)
@@ -248,7 +261,7 @@ def generate_game(
             fascist_policies_enacted=game_state.fascist_policies_enacted,
         )
 
-        # 4. All players vote
+        # 4. All alive players vote
         votes = conduct_vote(
             num_players=NUM_PLAYERS,
             president_id=president_id,
@@ -257,6 +270,7 @@ def generate_game(
             suspicions=suspicions,
             election_tracker=game_state.election_tracker.count,
             fascist_policies_enacted=game_state.fascist_policies_enacted,
+            executed_players=game_state.executed_players,
         )
 
         vote_passed = votes.passed
@@ -280,9 +294,8 @@ def generate_game(
                     actual_deck_fascist, actual_deck_liberal
                 )
 
-                # Enact the policy
-                game_state.enact_policy(enacted)
-                game_state.handle_chaos()
+                # Enact the policy and reset election tracker
+                game_state.handle_chaos(enacted)
 
                 # Record chaos round
                 round_data = {
@@ -295,7 +308,10 @@ def generate_game(
                     "election_tracker": 0,  # Reset after chaos
                     "enacted": enacted.value,
                     "chaos": True,
-                    "actual_deck": {"fascist": actual_deck_fascist, "liberal": actual_deck_liberal},
+                    "actual_deck": {
+                        "fascist": actual_deck_fascist,
+                        "liberal": actual_deck_liberal,
+                    },
                     "reshuffled": reshuffled,
                     "player_beliefs": {str(k): round(v, 4) for k, v in suspicions.items()},
                     "deck_expected": sim.deck_state.get_expected_composition(),
@@ -303,6 +319,7 @@ def generate_game(
                         "fascist": game_state.fascist_policies_enacted,
                         "liberal": game_state.liberal_policies_enacted,
                     },
+                    "executed_players": sorted(game_state.executed_players),
                 }
             else:
                 # 5b. Just a failed election
@@ -323,6 +340,7 @@ def generate_game(
                         "fascist": game_state.fascist_policies_enacted,
                         "liberal": game_state.liberal_policies_enacted,
                     },
+                    "executed_players": sorted(game_state.executed_players),
                 }
         else:
             # 6. Vote passed
@@ -348,6 +366,7 @@ def generate_game(
                         "fascist": game_state.fascist_policies_enacted,
                         "liberal": game_state.liberal_policies_enacted,
                     },
+                    "executed_players": sorted(game_state.executed_players),
                 }
                 game_data["rounds"].append(round_data)
                 break
@@ -367,41 +386,164 @@ def generate_game(
             draw = simulate_actual_draw(actual_deck_fascist, actual_deck_liberal)
 
             # Determine what actually happens based on true player types
-            president_is_fascist = player_roles.is_bad(president_id)
-            chancellor_is_fascist = player_roles.is_bad(chancellor_id)
-            enacted = determine_enacted_policy(draw, president_is_fascist, chancellor_is_fascist)
+            president_is_fascist = player_roles.is_facist_or_hitler(president_id)
+            chancellor_is_fascist = player_roles.is_facist_or_hitler(chancellor_id)
 
-            # Update actual deck (all 3 drawn cards are discarded)
-            actual_deck_fascist -= draw.fascist
-            actual_deck_liberal -= draw.liberal
+            # Determine what the president passes to chancellor
+            passed = president_passes(draw, president_is_fascist)
 
-            # Run Bayesian update
-            result = sim.play_round(president_id, chancellor_id, enacted)
+            # Check for veto power
+            veto_proposed = False
+            veto_accepted = False
+            if game_state.veto_available:
+                chancellor_role = player_roles.get_role(chancellor_id)
+                if should_propose_veto(chancellor_role, passed):
+                    veto_proposed = True
+                    president_role = player_roles.get_role(president_id)
+                    chanc_suspicion = suspicions.get(chancellor_id, 0.5)
+                    if should_accept_veto(president_role, chanc_suspicion):
+                        veto_accepted = True
 
-            # Enact the policy and check win conditions
-            game_state.enact_policy(enacted)
+            if veto_proposed and veto_accepted:
+                # Veto succeeds: discard both cards, election tracker +1
+                actual_deck_fascist -= draw.fascist
+                actual_deck_liberal -= draw.liberal
 
-            # Build round data
-            round_data = result.to_dict()
-            round_data["round_type"] = RoundType.LEGISLATIVE.value
-            round_data["votes"] = votes.to_dict()
-            round_data["vote_passed"] = True
-            round_data["election_tracker"] = game_state.election_tracker.count
-            round_data["actual_draw"] = {"fascist": draw.fascist, "liberal": draw.liberal}
-            round_data["actual_deck"] = {
-                "fascist": actual_deck_fascist,
-                "liberal": actual_deck_liberal,
-            }
-            round_data["reshuffled"] = reshuffled
-            round_data["policies_enacted"] = {
-                "fascist": game_state.fascist_policies_enacted,
-                "liberal": game_state.liberal_policies_enacted,
-            }
+                chaos_triggered = game_state.election_tracker.increment()
 
-            if game_state.game_over:
-                round_data["game_over"] = True
-                round_data["winner"] = game_state.winner
-                round_data["win_condition"] = game_state.win_condition
+                round_data = {
+                    "round_num": round_num,
+                    "president_id": president_id,
+                    "chancellor_id": chancellor_id,
+                    "round_type": RoundType.LEGISLATIVE.value,
+                    "vote_passed": True,
+                    "votes": votes.to_dict(),
+                    "election_tracker": game_state.election_tracker.count,
+                    "actual_draw": {
+                        "fascist": draw.fascist,
+                        "liberal": draw.liberal,
+                    },
+                    "actual_deck": {
+                        "fascist": actual_deck_fascist,
+                        "liberal": actual_deck_liberal,
+                    },
+                    "reshuffled": reshuffled,
+                    "player_beliefs": {str(k): round(v, 4) for k, v in suspicions.items()},
+                    "deck_expected": {
+                        "fascist": round(sim.deck_state.get_expected_composition()[0], 1),
+                        "liberal": round(sim.deck_state.get_expected_composition()[1], 1),
+                    },
+                    "policies_enacted": {
+                        "fascist": game_state.fascist_policies_enacted,
+                        "liberal": game_state.liberal_policies_enacted,
+                    },
+                    "veto_proposed": True,
+                    "veto_accepted": True,
+                    "executed_players": sorted(game_state.executed_players),
+                }
+
+                # If chaos triggered by veto, enact top policy
+                if chaos_triggered:
+                    if actual_deck_fascist + actual_deck_liberal < 1:
+                        actual_deck_fascist = FASCIST_POLICIES
+                        actual_deck_liberal = LIBERAL_POLICIES
+                        sim.reset_deck(FASCIST_POLICIES, LIBERAL_POLICIES)
+
+                    (
+                        chaos_policy,
+                        actual_deck_fascist,
+                        actual_deck_liberal,
+                    ) = flip_top_policy(actual_deck_fascist, actual_deck_liberal)
+                    game_state.handle_chaos(chaos_policy)
+                    round_data["chaos"] = True
+                    round_data["enacted"] = chaos_policy.value
+                    round_data["policies_enacted"] = {
+                        "fascist": game_state.fascist_policies_enacted,
+                        "liberal": game_state.liberal_policies_enacted,
+                    }
+
+                    if game_state.game_over:
+                        round_data["game_over"] = True
+                        round_data["winner"] = game_state.winner
+                        round_data["win_condition"] = game_state.win_condition
+            else:
+                # Normal legislative session (or veto rejected)
+                enacted = chancellor_enacts(passed, chancellor_is_fascist)
+
+                # Update actual deck (all 3 drawn cards are discarded)
+                actual_deck_fascist -= draw.fascist
+                actual_deck_liberal -= draw.liberal
+
+                # Run Bayesian update
+                result = sim.play_round(president_id, chancellor_id, enacted)
+
+                # Enact the policy and check win conditions
+                executive_power = game_state.enact_policy(enacted)
+
+                # Build round data
+                round_data = result.to_dict()
+                round_data["round_type"] = RoundType.LEGISLATIVE.value
+                round_data["votes"] = votes.to_dict()
+                round_data["vote_passed"] = True
+                round_data["election_tracker"] = game_state.election_tracker.count
+                round_data["actual_draw"] = {
+                    "fascist": draw.fascist,
+                    "liberal": draw.liberal,
+                }
+                round_data["actual_deck"] = {
+                    "fascist": actual_deck_fascist,
+                    "liberal": actual_deck_liberal,
+                }
+                round_data["reshuffled"] = reshuffled
+                round_data["policies_enacted"] = {
+                    "fascist": game_state.fascist_policies_enacted,
+                    "liberal": game_state.liberal_policies_enacted,
+                }
+                round_data["executed_players"] = sorted(game_state.executed_players)
+
+                if veto_proposed and not veto_accepted:
+                    round_data["veto_proposed"] = True
+                    round_data["veto_accepted"] = False
+
+                if game_state.game_over:
+                    round_data["game_over"] = True
+                    round_data["winner"] = game_state.winner
+                    round_data["win_condition"] = game_state.win_condition
+
+                # Handle executive power (only if game isn't over)
+                elif executive_power != ExecutivePower.NONE:
+                    round_data["executive_action"] = executive_power.value
+
+                    if executive_power == ExecutivePower.POLICY_PEEK:
+                        # President sees top 3 cards
+                        deck = ["BAD"] * actual_deck_fascist + ["GOOD"] * actual_deck_liberal
+                        peek = deck[:3] if len(deck) >= 3 else deck
+                        round_data["policy_peek"] = peek
+
+                    elif executive_power == ExecutivePower.EXECUTION:
+                        # President chooses a player to execute
+                        alive_players = [p for p in range(NUM_PLAYERS) if game_state.is_alive(p)]
+                        is_fascist_map = {
+                            p: player_roles.is_facist_or_hitler(p) for p in range(NUM_PLAYERS)
+                        }
+                        president_role = player_roles.get_role(president_id)
+                        target = choose_execution_target(
+                            president_id=president_id,
+                            role=president_role,
+                            alive_players=alive_players,
+                            is_fascist_map=is_fascist_map,
+                            hitler_id=player_roles.hitler_id,
+                            suspicions=suspicions,
+                        )
+                        game_state.execute_player(target)
+                        round_data["executed_player"] = target
+                        round_data["executed_players"] = sorted(game_state.executed_players)
+
+                        # Check if Hitler was assassinated
+                        if game_state.check_hitler_assassination(target, player_roles):
+                            round_data["game_over"] = True
+                            round_data["winner"] = game_state.winner
+                            round_data["win_condition"] = game_state.win_condition
 
         game_data["rounds"].append(round_data)
 
@@ -414,6 +556,7 @@ def generate_game(
             "fascist": game_state.fascist_policies_enacted,
             "liberal": game_state.liberal_policies_enacted,
         },
+        "executed_players": sorted(game_state.executed_players),
     }
 
     return game_data

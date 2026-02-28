@@ -19,17 +19,21 @@ from .core import (
     DeckComposition,
     Draw,
     ElectionTracker,
+    ExecutivePower,
     Policy,
     Role,
     TermLimits,
     Vote,
     VoteRecord,
     chancellor_enacts,
+    choose_execution_target,
     enacted_policy_for_types,
     fascist_voting_strategy,
     hitler_voting_strategy,
     liberal_voting_strategy,
     president_passes,
+    should_accept_veto,
+    should_propose_veto,
 )
 from .generator import generate_game
 from .simulation import (
@@ -46,6 +50,7 @@ from .simulation import (
 __all__ = [
     # Core models
     "Policy",
+    "ExecutivePower",
     "Draw",
     "DeckComposition",
     # Voting and election models
@@ -58,6 +63,9 @@ __all__ = [
     "president_passes",
     "chancellor_enacts",
     "enacted_policy_for_types",
+    "choose_execution_target",
+    "should_propose_veto",
+    "should_accept_veto",
     # Voting strategy functions
     "liberal_voting_strategy",
     "fascist_voting_strategy",

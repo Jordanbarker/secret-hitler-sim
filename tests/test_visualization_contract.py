@@ -207,16 +207,18 @@ class TestRoundRequiredFields:
             assert "policies_enacted" in round_data, f"Round {round_num} missing policies_enacted"
 
     def test_votes_structure(self):
-        """Votes must have string keys for all players."""
+        """Votes must have string keys for alive players (subset of all players)."""
         game = generate_game(seed=42)
         num_players = game["config"]["num_players"]
-        expected_keys = {str(i) for i in range(num_players)}
+        all_keys = {str(i) for i in range(num_players)}
 
         for i, round_data in enumerate(game["rounds"]):
             votes = round_data["votes"]
-            assert set(votes.keys()) == expected_keys, (
-                f"Round {i + 1} votes have wrong keys: {set(votes.keys())}"
+            vote_keys = set(votes.keys())
+            assert vote_keys.issubset(all_keys), (
+                f"Round {i + 1} votes have invalid keys: {vote_keys - all_keys}"
             )
+            assert len(vote_keys) > 0, f"Round {i + 1} has no votes"
 
 
 class TestFinalState:

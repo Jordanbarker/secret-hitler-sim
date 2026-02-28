@@ -17,6 +17,7 @@ from dataclasses import dataclass, field
 from enum import Enum
 
 from .constants import (
+    FASCIST_BOARD_POWERS_6P,
     FASCIST_POLICIES,
     INITIAL_PRIOR_FASCIST_PROB,
     LIBERAL_POLICIES,
@@ -25,6 +26,7 @@ from .constants import (
 from .core import (
     DeckComposition,
     ElectionTracker,
+    ExecutivePower,
     Policy,
     Role,
     TermLimits,
@@ -259,7 +261,7 @@ class PlayerRoles:
 
         return cls(roles=roles, hitler_id=hitler_id)
 
-    def is_bad(self, player_id: int) -> bool:
+    def is_facist_or_hitler(self, player_id: int) -> bool:
         """Check if a player is on the fascist team (fascist or Hitler)."""
         role = self.roles.get(player_id)
         return role in (Role.FASCIST, Role.HITLER)
@@ -284,17 +286,14 @@ class GameState:
     game_over: bool = False
     winner: str | None = None  # "LIBERAL" or "FASCIST"
     win_condition: str | None = None
+    executed_players: set[int] = field(default_factory=set)
+    veto_available: bool = False
 
-    def enact_policy(
-        self,
-        policy: Policy,
-        player_roles: PlayerRoles | None = None,
-        chancellor_id: int | None = None,
-    ) -> bool:
+    def enact_policy(self, policy: Policy) -> ExecutivePower:
         """
         Enact a policy and check win conditions.
 
-        Returns True if game is over.
+        Returns the executive power granted (NONE if liberal policy or no power).
         """
         if policy == Policy.BAD:
             self.fascist_policies_enacted += 1
@@ -306,14 +305,31 @@ class GameState:
             self.game_over = True
             self.winner = "LIBERAL"
             self.win_condition = "5 Liberal policies enacted"
-            return True
+            return ExecutivePower.NONE
         if self.fascist_policies_enacted >= 6:
             self.game_over = True
             self.winner = "FASCIST"
             self.win_condition = "6 Fascist policies enacted"
-            return True
+            return ExecutivePower.NONE
 
-        return False
+        # Enable veto after 5th Fascist policy
+        if self.fascist_policies_enacted >= 5:
+            self.veto_available = True
+
+        # Determine executive power granted
+        if policy == Policy.BAD:
+            return self.get_executive_power()
+
+        return ExecutivePower.NONE
+
+    def get_executive_power(self) -> ExecutivePower:
+        """Get the executive power granted for the current Fascist policy count."""
+        idx = self.fascist_policies_enacted - 1  # 0-indexed
+        if idx < len(FASCIST_BOARD_POWERS_6P):
+            power_str = FASCIST_BOARD_POWERS_6P[idx]
+            if power_str is not None:
+                return ExecutivePower(power_str)
+        return ExecutivePower.NONE
 
     def check_hitler_chancellor_win(self, chancellor_id: int, player_roles: PlayerRoles) -> bool:
         """Check if Hitler being elected chancellor triggers fascist win."""
@@ -323,6 +339,23 @@ class GameState:
             self.win_condition = "Hitler elected Chancellor after 3+ Fascist policies"
             return True
         return False
+
+    def check_hitler_assassination(self, player_id: int, player_roles: PlayerRoles) -> bool:
+        """Check if executing a player kills Hitler, winning for Liberals."""
+        if player_roles.is_hitler(player_id):
+            self.game_over = True
+            self.winner = "LIBERAL"
+            self.win_condition = "Hitler was assassinated"
+            return True
+        return False
+
+    def execute_player(self, player_id: int) -> None:
+        """Mark a player as executed."""
+        self.executed_players.add(player_id)
+
+    def is_alive(self, player_id: int) -> bool:
+        """Check if a player is still alive (not executed)."""
+        return player_id not in self.executed_players
 
     def handle_successful_election(self, president_id: int, chancellor_id: int) -> None:
         """Update state after a successful election."""
@@ -335,8 +368,9 @@ class GameState:
         """
         return self.election_tracker.increment()
 
-    def handle_chaos(self) -> None:
+    def handle_chaos(self, policy: Policy) -> None:
         """Handle chaos - clear term limits."""
+        self.enact_policy(policy)
         self.term_limits.clear()
 
 

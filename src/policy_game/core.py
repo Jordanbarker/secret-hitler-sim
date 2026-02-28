@@ -10,6 +10,7 @@ This module contains:
 
 from __future__ import annotations
 
+import random
 from dataclasses import dataclass, field
 from enum import Enum
 from math import comb
@@ -21,6 +22,14 @@ class Policy(Enum):
 
     BAD = "BAD"
     GOOD = "GOOD"
+
+
+class ExecutivePower(Enum):
+    """Executive powers granted after enacting Fascist policies."""
+
+    NONE = "NONE"
+    POLICY_PEEK = "POLICY_PEEK"
+    EXECUTION = "EXECUTION"
 
 
 class Vote(Enum):
@@ -256,8 +265,10 @@ def liberal_voting_strategy(
     - Election tracker pressure (vote JA if tracker is at 2 to avoid chaos)
     - General tendency to approve unless suspicious
     """
-    pres_suspicion = suspicions.get(president_id, 0.5)
-    chanc_suspicion = suspicions.get(chancellor_id, 0.5)
+    pres_suspicion = suspicions.get(president_id)
+    chanc_suspicion = suspicions.get(chancellor_id)
+    assert pres_suspicion is not None, "Suspicion values must be provided for president candidate"
+    assert chanc_suspicion is not None, "Suspicion values must be provided for chancellor candidate"
 
     # If election tracker is at 2, tend to vote JA to avoid chaos
     if election_tracker >= 2:
@@ -269,8 +280,6 @@ def liberal_voting_strategy(
     # Vote NEIN if either candidate seems suspicious
     if pres_suspicion > 0.6 or chanc_suspicion > 0.6:
         return Vote.NEIN
-
-    # Default to JA
     return Vote.JA
 
 
@@ -311,7 +320,6 @@ def hitler_voting_strategy(
     president_id: int,
     chancellor_id: int,
     suspicions: dict[int, float],
-    is_fascist: dict[int, bool],
     election_tracker: int,
     bad_policies_enacted: int,
 ) -> Vote:
@@ -337,3 +345,84 @@ def hitler_voting_strategy(
 
     # Default to JA more often than a typical liberal would
     return Vote.JA
+
+
+# =============================================================================
+# EXECUTION STRATEGY
+# =============================================================================
+
+
+def choose_execution_target(
+    president_id: int,
+    role: Role,
+    alive_players: list[int],
+    is_fascist_map: dict[int, bool],
+    hitler_id: int,
+    suspicions: dict[int, float],
+) -> int:
+    """
+    President chooses a player to execute.
+
+    Strategy:
+    - Liberal president: Execute the most suspicious player
+    - Fascist president: Execute a random Liberal (avoid Hitler and fellow Fascists)
+    - Hitler president: Act like a Liberal (execute most suspicious) to blend in
+    """
+    candidates = [p for p in alive_players if p != president_id]
+
+    if role == Role.FASCIST:
+        # Avoid executing Hitler or fellow Fascists
+        liberal_candidates = [p for p in candidates if not is_fascist_map.get(p, False)]
+        if liberal_candidates:
+            return random.choice(liberal_candidates)
+        # Fallback: pick random non-self (shouldn't happen normally)
+        return random.choice(candidates)
+
+    # Liberal or Hitler: execute most suspicious player
+    sorted_candidates = sorted(candidates, key=lambda p: suspicions.get(p, 0.5), reverse=True)
+    return sorted_candidates[0]
+
+
+# =============================================================================
+# VETO STRATEGY
+# =============================================================================
+
+
+def should_propose_veto(
+    chancellor_role: Role,
+    received: Draw,
+) -> bool:
+    """
+    Chancellor decides whether to propose a veto.
+
+    Strategy:
+    - Liberal chancellor: Propose veto when forced to enact Fascist (received 2 Fascist)
+    - Fascist chancellor: Propose veto when forced to enact Liberal (received 2 Liberal)
+    - Hitler: Act like Liberal
+    """
+    if chancellor_role in (Role.LIBERAL, Role.HITLER):
+        # Veto when only Fascist policies available
+        return received.liberal == 0
+    else:
+        # Fascist: veto when only Liberal policies available
+        return received.fascist == 0
+
+
+def should_accept_veto(
+    president_role: Role,
+    chancellor_suspicion: float,
+) -> bool:
+    """
+    President decides whether to accept a veto proposal.
+
+    Strategy:
+    - Liberal president: Accept if chancellor seems Liberal (low suspicion)
+    - Fascist president: Accept (vetoing delays Liberal policies)
+    - Hitler: Act like Liberal
+    """
+    if president_role in (Role.LIBERAL, Role.HITLER):
+        # Accept veto if chancellor doesn't seem suspicious
+        return chancellor_suspicion < 0.6
+    else:
+        # Fascist president: usually accept veto
+        return True
