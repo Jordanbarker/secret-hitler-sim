@@ -711,14 +711,14 @@
         }
 
         @media (max-width: 400px) {
+            .player-name {
+                font-size: 0.75rem;
+            }
 
             .player-card {
                 grid-template-columns: auto 1fr auto;
             }
 
-            .policy-boards {
-                gap: 20px;
-            }
         }
 
         /* Tutorial overlay system */
@@ -1570,6 +1570,12 @@ if '/' not in sys.path:
             {
                 target: null,
                 position: 'center',
+                text: '<strong>How Bayesian Updates Work</strong><br><br>The model considers every possible draw combination from the estimated deck. For each possible draw it asks: "How likely is each player role combination to produce this result?" Then Bayes\' rule updates beliefs — roles that better explain the outcome become more probable.',
+                button: 'Next'
+            },
+            {
+                target: null,
+                position: 'center',
                 text: 'Advancing to Round 1...',
                 button: null,
                 onAutoAdvance() { currentRound = 0; updateDisplay(); }
@@ -1581,15 +1587,15 @@ if '/' not in sys.path:
                 button: 'Next'
             },
             {
-                target: null,
-                position: 'center',
-                text: '<strong>How Bayesian Updates Work</strong><br><br>The model considers every possible draw combination from the estimated deck. For each possible draw it asks: "How likely is each player role combination to produce this result?" Then Bayes\' rule updates beliefs — roles that better explain the outcome become more probable.',
+                target: '.player-grid',
+                position: 'below',
+                text: '<strong>Policy Cards</strong><br><br>The small cards on the president show the 3 drawn (&#x2716; = discarded). The chancellor\'s cards show the 2 received (highlighted = enacted).',
                 button: 'Next'
             },
             {
                 target: '.player-grid',
                 position: 'below',
-                text: '<strong>Policy Cards</strong><br><br>The small cards on the president show the 3 drawn (&#x2716; = discarded). The chancellor\'s cards show the 2 received (highlighted = enacted).<br><br>The model assumes liberals play optimally — they discard fascist policies and enact liberal ones. Fascists do the opposite.',
+                text: '<strong>Player Choices</strong><br><br>The model assumes liberals play optimally — they discard fascist policies and enact liberal ones. Fascists do the opposite.',
                 button: 'Next'
             },
             {
@@ -1608,7 +1614,7 @@ if '/' not in sys.path:
             {
                 target: '.player-grid',
                 position: 'below',
-                dynamicText: computeRound2Text,
+                text: `<strong>Round 2 — Compounding Beliefs</strong><br><br>Beliefs compound across rounds. A player involved in multiple suspicious governments will see their probability climb rapidly.`,
                 button: 'Next'
             },
             {
@@ -1630,7 +1636,7 @@ if '/' not in sys.path:
 
             let text = `<strong>Round 1 Update</strong><br><br>`;
             text += `<strong>${pres}</strong> (president) and <strong>${chanc}</strong> (chancellor) enacted a <strong>${policy}</strong> policy.`;
-            text += `<br><br>Notice how the probabilities shifted — the Bayesian model updated its beliefs based on who was in government and what policy passed.`;
+            text += `<br>The Bayesian model updated its beliefs based and what policy passed.`;
             return text;
         }
 
@@ -1652,21 +1658,6 @@ if '/' not in sys.path:
             text += `Right now the deck has <strong>${aF}F / ${aL}L</strong> actual cards, `;
             text += `but the model estimates <strong>~${eF}F / ~${eL}L</strong>.<br><br>`;
             text += `The model uses this estimate when computing how likely each policy outcome is.`;
-            return text;
-        }
-
-        function computeRound2Text() {
-            if (!gameData || !gameData.rounds || gameData.rounds.length < 2) {
-                return 'Round 2 data is not available.';
-            }
-            const r = gameData.rounds[1];
-            const pres = `Player ${r.president_id}`;
-            const chanc = `Player ${r.chancellor_id}`;
-            const policy = r.enacted === 'BAD' ? 'Fascist' : 'Liberal';
-
-            let text = `<strong>Round 2 — Compounding Beliefs</strong><br><br>`;
-            text += `<strong>${pres}</strong> (president) and <strong>${chanc}</strong> (chancellor) enacted a <strong>${policy}</strong> policy.`;
-            text += `<br><br>Each round's update builds on the last — beliefs compound across rounds. A player involved in multiple suspicious governments will see their probability climb rapidly.`;
             return text;
         }
 
